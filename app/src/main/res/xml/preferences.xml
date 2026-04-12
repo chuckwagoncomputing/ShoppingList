@@ -19,8 +19,6 @@
 
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <PreferenceCategory android:layout="@layout/toolbar_settings">
-
         <Preference
             android:key="FILE_LOCATION"
             android:icon="@drawable/ic_sd_storage_24dp"
@@ -33,7 +31,5 @@
             android:title="@string/settings_theme"
             android:entries="@array/settings_theme_entries"
             android:entryValues="@array/settings_theme_entry_values" />
-
-    </PreferenceCategory>
 
 </PreferenceScreen>

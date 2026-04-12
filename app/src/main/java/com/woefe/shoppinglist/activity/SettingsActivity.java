@@ -20,6 +20,7 @@
 package com.woefe.shoppinglist.activity;
 
 import android.os.Bundle;
+import android.view.View;
 
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
@@ -36,7 +37,7 @@ public class SettingsActivity extends AppCompatActivity {
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
-		setContentView(R.layout.toolbar_settings);
+		setContentView(R.layout.activity_settings);
 
 		final Toolbar toolbar = findViewById(R.id.toolbar_settings);
 		toolbar.setTitle(R.string.action_settings);
@@ -48,7 +49,7 @@ public class SettingsActivity extends AppCompatActivity {
 		}
 
 		getSupportFragmentManager().beginTransaction()
-								   .replace(android.R.id.content, new SettingsFragment())
+								   .replace(R.id.settings_container, new SettingsFragment())
 								   .commit();
 	}
 }

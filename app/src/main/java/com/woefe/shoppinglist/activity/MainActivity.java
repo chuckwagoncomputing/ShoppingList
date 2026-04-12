@@ -183,13 +183,6 @@ public class MainActivity extends BinderActivity implements
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
-        MenuItem item = menu.findItem(R.id.action_share);
-        if (item != null) {
-            Object provider = item.getActionProvider();
-            if (provider instanceof androidx.appcompat.widget.ShareActionProvider) {
-                actionProvider = (androidx.appcompat.widget.ShareActionProvider) provider;
-            }
-        }
         return true;
     }
 
@@ -215,6 +208,8 @@ public class MainActivity extends BinderActivity implements
                 .setType("text/plain");
         if (actionProvider != null) {
             actionProvider.setShareIntent(intent);
+        } else {
+            startActivity(Intent.createChooser(intent, getString(R.string.share)));
         }
     }
 

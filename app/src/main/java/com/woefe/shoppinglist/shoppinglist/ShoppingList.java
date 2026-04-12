@@ -105,8 +105,13 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     @Override
     public ListItem remove(int index) {
+        ListItem removedItem = super.get(index);
+        int removedId = ((ListItem.ListItemWithID) removedItem).getId();
+        boolean removedIsChecked = removedItem.isChecked();
         ListItem res = super.remove(index);
-        notifyListChanged(Event.newItemRemoved(index));
+        Event event = Event.newItemRemoved(index);
+        event.setRemovedItem(removedId, removedIsChecked);
+        notifyListChanged(event);
         return res;
     }
 
@@ -251,7 +256,7 @@ public class ShoppingList extends ArrayList<ListItem> {
     }
 
     private void notifyListChanged(ShoppingList.Event event) {
-        for (ShoppingListListener listener : listeners) {
+        for (ShoppingListListener listener : new LinkedList<>(listeners)) {
             listener.onShoppingListUpdate(this, event);
         }
     }
@@ -271,6 +276,8 @@ public class ShoppingList extends ArrayList<ListItem> {
         private int index = -1;
         private int oldIndex = -1;
         private int newIndex = -1;
+        private int removedId = -1;
+        private boolean removedIsChecked = false;
 
         public Event(int state) {
             this.state = state;
@@ -321,6 +328,19 @@ public class ShoppingList extends ArrayList<ListItem> {
 
         public int getNewIndex() {
             return newIndex;
+        }
+
+        public int getRemovedId() {
+            return removedId;
+        }
+
+        public boolean getRemovedIsChecked() {
+            return removedIsChecked;
+        }
+
+        public void setRemovedItem(int id, boolean isChecked) {
+            this.removedId = id;
+            this.removedIsChecked = isChecked;
         }
 
     }

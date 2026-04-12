@@ -20,6 +20,8 @@
 package com.woefe.shoppinglist.shoppinglist;
 
 import android.os.FileObserver;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.SystemClock;
 import android.util.Log;
 
@@ -32,6 +34,7 @@ import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -148,34 +151,142 @@ class ShoppingListsManager {
 
     private ShoppingListMetadata addShoppingList(ShoppingList list, String filename) {
         final ShoppingListMetadata metadata = new ShoppingListMetadata(list, filename);
-        list.addListener(new ShoppingList.ShoppingListListener() {
+        final ShoppingList.ShoppingListListener updateListener = new ShoppingList.ShoppingListListener() {
             @Override
             public void onShoppingListUpdate(ShoppingList list, ShoppingList.Event e) {
-                metadata.isDirty = true;
+                int eventState = e.getState();
+                if (eventState == ShoppingList.Event.ITEM_REMOVED) {
+                    int removedId = e.getRemovedId();
+                    boolean removedIsChecked = e.getRemovedIsChecked();
+                    if (!metadata.locallyModifiedChecked.containsKey(removedId)) {
+                        metadata.locallyDeletedIds.add(removedId);
+                    }
+                    metadata.locallyModifiedChecked.put(removedId, removedIsChecked);
+                } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
+                    int index = e.getIndex();
+                    if (index >= 0 && index < list.size()) {
+                        int id = list.getId(index);
+                        metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
+                        metadata.locallyDeletedIds.remove(id);
+                    }
+                } else if (eventState == ShoppingList.Event.ITEM_INSERTED) {
+                    int index = e.getIndex();
+                    if (index >= 0 && index < list.size()) {
+                        int id = list.getId(index);
+                        metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
+                    }
+                }
+                try {
+                    relistAndWrite(metadata);
+                } catch (IOException | UnmarshallException ex) {
+                    Log.e(TAG, "Failed to relistAndWrite on update", ex);
+                }
             }
-        });
+        };
+        metadata.updateListener = updateListener;
+        list.addListener(updateListener);
         setupObserver(metadata);
         shoppingListsMetadata.add(metadata);
         return metadata;
     }
 
+    private void relistAndWrite(ShoppingListMetadata metadata) throws IOException, UnmarshallException {
+        metadata.isSyncing = true;
+        boolean hadListener = metadata.updateListener != null;
+        if (hadListener) {
+            metadata.shoppingList.removeListener(metadata.updateListener);
+        }
+
+        Map<Integer, Boolean> localCheckedChanges = new HashMap<>(metadata.locallyModifiedChecked);
+        Set<Integer> localDeletions = new HashSet<>(metadata.locallyDeletedIds);
+
+        try {
+            File file = new File(metadata.filename);
+            if (file.exists()) {
+                ShoppingList latestList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
+                Set<Integer> fileIds = new HashSet<>();
+                for (int i = 0; i < latestList.size(); i++) {
+                    fileIds.add(latestList.getId(i));
+                }
+
+                metadata.shoppingList.clear();
+
+                for (int i = 0; i < latestList.size(); i++) {
+                    int id = latestList.getId(i);
+                    if (localDeletions.contains(id)) {
+                        continue;
+                    }
+                    ListItem item = latestList.get(i);
+                    if (localCheckedChanges.containsKey(id)) {
+                        item.setChecked(localCheckedChanges.get(id));
+                    }
+                    metadata.shoppingList.add(item);
+                }
+
+                for (Integer changedId : localCheckedChanges.keySet()) {
+                    if (!fileIds.contains(changedId) && !localDeletions.contains(changedId)) {
+                        boolean checkedStatus = localCheckedChanges.get(changedId);
+                        ListItem reAddItem = new ListItem(checkedStatus, "", "");
+                        metadata.shoppingList.add(new ListItem.ListItemWithID(changedId, reAddItem));
+                    }
+                }
+            }
+            metadata.locallyModifiedChecked.clear();
+            metadata.locallyDeletedIds.clear();
+            metadata.isDirty = true;
+            writeToFile(metadata);
+        } finally {
+            if (hadListener) {
+                metadata.shoppingList.addListener(metadata.updateListener);
+            }
+            metadata.isSyncing = false;
+        }
+    }
+
+    private void writeToFile(ShoppingListMetadata metadata) throws IOException {
+        metadata.isSyncing = true;
+        try {
+            OutputStream os = new FileOutputStream(metadata.filename);
+            ShoppingListMarshaller.marshall(os, metadata.shoppingList);
+            metadata.isDirty = false;
+            Log.d(getClass().getSimpleName(), "Wrote file immediately: " + metadata.filename);
+        } finally {
+            metadata.isSyncing = false;
+        }
+    }
+
     private void setupObserver(final ShoppingListMetadata metadata) {
+        final Handler handler = new Handler(Looper.getMainLooper());
         FileObserver fileObserver = new FileObserver(metadata.filename) {
             @Override
             public void onEvent(int event, String path) {
                 switch (event) {
                     case FileObserver.CLOSE_WRITE:
-                        try {
-                            ShoppingList list = ShoppingListUnmarshaller.unmarshal(metadata.filename);
-                            metadata.shoppingList.clear();
-                            metadata.shoppingList.addAll(list);
-                            metadata.isDirty = false;
+                        handler.post(() -> {
+                            if (!metadata.isSyncing) {
+                                metadata.isSyncing = true;
+                                boolean hadListener = metadata.updateListener != null;
+                                if (hadListener) {
+                                    metadata.shoppingList.removeListener(metadata.updateListener);
+                                }
+                                try {
+                                    ShoppingList list = ShoppingListUnmarshaller.unmarshal(metadata.filename);
+                                    metadata.shoppingList.clear();
+                                    metadata.shoppingList.addAll(list);
+                                    metadata.isDirty = false;
 
-                            String oldName = metadata.shoppingList.getName();
-                            rename(oldName, list.getName());
-                        } catch (IOException | UnmarshallException e) {
-                            Log.e(TAG, "FileObserver could not read file.", e);
-                        }
+                                    String oldName = metadata.shoppingList.getName();
+                                    rename(oldName, list.getName());
+                                } catch (IOException | UnmarshallException e) {
+                                    Log.e(TAG, "FileObserver could not read file.", e);
+                                } finally {
+                                    if (hadListener) {
+                                        metadata.shoppingList.addListener(metadata.updateListener);
+                                    }
+                                    metadata.isSyncing = false;
+                                }
+                            }
+                        });
                         break;
                 }
             }
@@ -208,6 +319,11 @@ class ShoppingListsManager {
         String filename = new File(this.directory, URLEncoder.encode(name) + FILE_ENDING).getPath();
         ShoppingListMetadata metadata = addShoppingList(new ShoppingList(name), filename);
         metadata.isDirty = true;
+        try {
+            writeToFile(metadata);
+        } catch (IOException e) {
+            Log.e(TAG, "Failed to write new list", e);
+        }
     }
 
     boolean removeList(String name) {
@@ -252,12 +368,17 @@ class ShoppingListsManager {
         private final ShoppingList shoppingList;
         private final String filename;
         private boolean isDirty;
+        private boolean isSyncing;
         private FileObserver observer;
+        private ShoppingList.ShoppingListListener updateListener;
+        private Map<Integer, Boolean> locallyModifiedChecked = new HashMap<>();
+        private Set<Integer> locallyDeletedIds = new HashSet<>();
 
         private ShoppingListMetadata(ShoppingList shoppingList, String filename) {
             this.shoppingList = shoppingList;
             this.filename = filename;
             this.isDirty = false;
+            this.isSyncing = false;
         }
     }
 

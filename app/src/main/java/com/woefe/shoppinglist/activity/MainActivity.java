@@ -19,20 +19,9 @@
 
 package com.woefe.shoppinglist.activity;
 
-import android.app.Fragment;
-import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.PersistableBundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
-import android.support.v4.view.MenuItemCompat;
-import android.support.v4.widget.DrawerLayout;
-import android.support.v7.app.ActionBar;
-import android.support.v7.app.ActionBarDrawerToggle;
-import android.support.v7.app.AppCompatDelegate;
-import android.support.v7.widget.ShareActionProvider;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -42,6 +31,21 @@ import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
 import android.widget.Toast;
+
+import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.ActionBar;
+import androidx.appcompat.app.ActionBarDrawerToggle;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.appcompat.widget.ShareActionProvider;
+import androidx.appcompat.widget.Toolbar;
+import androidx.core.view.MenuItemCompat;
+import androidx.drawerlayout.widget.DrawerLayout;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+
+import com.google.android.material.snackbar.Snackbar;
 
 import com.woefe.shoppinglist.R;
 import com.woefe.shoppinglist.dialog.ConfirmationDialog;
@@ -77,6 +81,16 @@ public class MainActivity extends BinderActivity implements
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+            @Override
+            public void handleOnBackPressed() {
+                if (currentFragment instanceof ShoppingListFragment &&
+                        !((ShoppingListFragment) currentFragment).onBackPressed()) {
+                    finish();
+                }
+            }
+        });
+
         drawerLayout = findViewById(R.id.drawer_layout);
         drawerContainer = findViewById(R.id.nav_drawer_container);
         drawerList = findViewById(R.id.nav_drawer_content);
@@ -105,7 +119,7 @@ public class MainActivity extends BinderActivity implements
         drawerLayout.addDrawerListener(drawerToggle);
 
         if (savedInstanceState != null) {
-            Fragment fragment = getFragmentManager().getFragment(savedInstanceState, KEY_FRAGMENT);
+            Fragment fragment = getSupportFragmentManager().getFragment(savedInstanceState, KEY_FRAGMENT);
             String name = savedInstanceState.getString(KEY_LIST_NAME);
             setFragment(fragment, name);
         }
@@ -128,7 +142,7 @@ public class MainActivity extends BinderActivity implements
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         if (currentFragment != null) {
-            getFragmentManager().putFragment(outState, KEY_FRAGMENT, currentFragment);
+            getSupportFragmentManager().putFragment(outState, KEY_FRAGMENT, currentFragment);
         }
         outState.putString(KEY_LIST_NAME, currentListName);
         super.onSaveInstanceState(outState);
@@ -167,19 +181,15 @@ public class MainActivity extends BinderActivity implements
     }
 
     @Override
-    public void onBackPressed() {
-        if (currentFragment instanceof ShoppingListFragment &&
-                !((ShoppingListFragment) currentFragment).onBackPressed()) {
-
-            super.onBackPressed();
-        }
-    }
-
-    @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         MenuItem item = menu.findItem(R.id.action_share);
-        actionProvider = (ShareActionProvider) MenuItemCompat.getActionProvider(item);
+        if (item != null) {
+            Object provider = item.getActionProvider();
+            if (provider instanceof androidx.appcompat.widget.ShareActionProvider) {
+                actionProvider = (androidx.appcompat.widget.ShareActionProvider) provider;
+            }
+        }
         return true;
     }
 
@@ -215,48 +225,48 @@ public class MainActivity extends BinderActivity implements
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_settings:
-                openSettings();
-                return true;
-            case R.id.action_delete_checked:
-                String message = getString(R.string.remove_checked_items);
-                ConfirmationDialog.show(this, message, R.id.action_delete_checked);
-                return true;
-            case R.id.action_delete_list:
-                message = getString(R.string.confirm_delete_list, getTitle());
-                if (getBinder().hasList(currentListName)) {
-                    ConfirmationDialog.show(this, message, R.id.action_delete_list);
-                } else {
-                    Toast.makeText(this, R.string.err_cannot_delete_list, Toast.LENGTH_LONG).show();
-                }
-                return true;
-            case R.id.action_new_list:
-                NewListDialog.Builder builder = new TextInputDialog.Builder(this, NewListDialog.class);
-                builder.setAction(R.id.action_new_list)
-                        .setMessage(R.string.add_new_list)
-                        .setHint(R.string.add_list_hint)
-                        .show();
-                return true;
-            case R.id.action_view_about:
-                Intent intent = new Intent(this, AboutActivity.class);
-                startActivity(intent);
-                return true;
-            case R.id.action_share:
-                doShare();
-                return true;
-            case R.id.action_sort_a_to_z:
-                sort(true);
-                return true;
-            case R.id.action_sort_z_to_a:
-                sort(false);
-                return true;
-            case R.id.action_sort_by_checked_asc:
-                sortByChecked(false);
-                return true;
-            case R.id.action_sort_by_checked_desc:
-                sortByChecked(true);
-                return true;
+        int itemId = item.getItemId();
+        if (itemId == R.id.action_settings) {
+            openSettings();
+            return true;
+        } else if (itemId == R.id.action_delete_checked) {
+            String message = getString(R.string.remove_checked_items);
+            ConfirmationDialog.show(this, message, R.id.action_delete_checked);
+            return true;
+        } else if (itemId == R.id.action_delete_list) {
+            String message = getString(R.string.confirm_delete_list, getTitle());
+            if (getBinder().hasList(currentListName)) {
+                ConfirmationDialog.show(this, message, R.id.action_delete_list);
+            } else {
+                Toast.makeText(this, R.string.err_cannot_delete_list, Toast.LENGTH_LONG).show();
+            }
+            return true;
+        } else if (itemId == R.id.action_new_list) {
+            NewListDialog.Builder builder = new TextInputDialog.Builder(this, NewListDialog.class);
+            builder.setAction(R.id.action_new_list)
+                    .setMessage(R.string.add_new_list)
+                    .setHint(R.string.add_list_hint)
+                    .show();
+            return true;
+        } else if (itemId == R.id.action_view_about) {
+            Intent intent = new Intent(this, AboutActivity.class);
+            startActivity(intent);
+            return true;
+        } else if (itemId == R.id.action_share) {
+            doShare();
+            return true;
+        } else if (itemId == R.id.action_sort_a_to_z) {
+            sort(true);
+            return true;
+        } else if (itemId == R.id.action_sort_z_to_a) {
+            sort(false);
+            return true;
+        } else if (itemId == R.id.action_sort_by_checked_asc) {
+            sortByChecked(false);
+            return true;
+        } else if (itemId == R.id.action_sort_by_checked_desc) {
+            sortByChecked(true);
+            return true;
         }
         return super.onOptionsItemSelected(item);
     }
@@ -297,21 +307,18 @@ public class MainActivity extends BinderActivity implements
 
     @Override
     public void onPositiveButtonClicked(int action) {
-        switch (action) {
-            case R.id.action_delete_checked:
-                if (currentFragment != null && currentFragment instanceof ShoppingListFragment) {
-                    ((ShoppingListFragment) currentFragment).removeAllCheckedItems();
-                }
-                break;
-            case R.id.action_delete_list:
-                boolean success = getBinder().removeList(getTitle().toString());
-                if (!success) {
-                    Toast.makeText(this, R.string.err_cannot_delete_list, Toast.LENGTH_LONG).show();
-                } else {
-                    updateDrawer();
-                    selectList(0);
-                }
-                break;
+        if (action == R.id.action_delete_checked) {
+            if (currentFragment != null && currentFragment instanceof ShoppingListFragment) {
+                ((ShoppingListFragment) currentFragment).removeAllCheckedItems();
+            }
+        } else if (action == R.id.action_delete_list) {
+            boolean success = getBinder().removeList(getTitle().toString());
+            if (!success) {
+                Toast.makeText(this, R.string.err_cannot_delete_list, Toast.LENGTH_LONG).show();
+            } else {
+                updateDrawer();
+                selectList(0);
+            }
         }
     }
 
@@ -319,7 +326,6 @@ public class MainActivity extends BinderActivity implements
     public void onNegativeButtonClicked(int action) {
     }
 
-    @Override
     public void onInputComplete(String input, int action) {
         if (isServiceConnected() && action == R.id.action_new_list) {
             try {
@@ -349,7 +355,7 @@ public class MainActivity extends BinderActivity implements
         this.currentFragment = fragment;
         setTitle(name);
         updateDrawer();
-        FragmentManager manager = getFragmentManager();
+        FragmentManager manager = getSupportFragmentManager();
         manager.beginTransaction().replace(R.id.content_frame, fragment).commit();
     }
 

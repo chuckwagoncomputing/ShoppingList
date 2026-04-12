@@ -28,7 +28,7 @@
     <string name="remove_checked_items">Verwijder alle aangevinkte items?</string>
     <string name="cancel">Annuleer</string>
     <string name="ok">Oké</string>
-    <string name="file_location">Bestandslocatie</string>
+    <string name="settings_file_location">Bestandslocatie</string>
     <string name="error_description_empty">Itembeschrijving mag niet leeg zijn!</string>
     <string name="drawer_open">Open navigatielade</string>
     <string name="drawer_close">Sluit navigatielade</string>

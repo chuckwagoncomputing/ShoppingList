@@ -67,7 +67,8 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     @Override
     public boolean add(ListItem item) {
-        boolean res = super.add(new ListItem.ListItemWithID(generateID(), item));
+        ListItem.ListItemWithID withId = new ListItem.ListItemWithID(generateID(), item);
+        boolean res = super.add(withId);
         notifyListChanged(Event.newItemInserted(size() - 1));
         return res;
     }
@@ -108,9 +109,11 @@ public class ShoppingList extends ArrayList<ListItem> {
         ListItem removedItem = super.get(index);
         int removedId = ((ListItem.ListItemWithID) removedItem).getId();
         boolean removedIsChecked = removedItem.isChecked();
+        String removedDesc = removedItem.getDescription();
         ListItem res = super.remove(index);
         Event event = Event.newItemRemoved(index);
         event.setRemovedItem(removedId, removedIsChecked);
+        event.setRemovedDescription(removedDesc);
         notifyListChanged(event);
         return res;
     }
@@ -224,15 +227,15 @@ public class ShoppingList extends ArrayList<ListItem> {
 
 
     public void removeAllCheckedItems() {
-        Iterator<ListItem> it = iterator();
-
-        while (it.hasNext()) {
-            ListItem item = it.next();
-            if (item.isChecked()) {
-                it.remove();
+        List<Integer> toRemoveIndices = new ArrayList<>();
+        for (int i = 0; i < size(); i++) {
+            if (get(i).isChecked()) {
+                toRemoveIndices.add(i);
             }
         }
-        notifyListChanged(Event.newOther());
+        for (int i = toRemoveIndices.size() - 1; i >= 0; i--) {
+            remove(toRemoveIndices.get(i));
+        }
     }
 
     public Set<String> createDescriptionIndex() {
@@ -278,6 +281,7 @@ public class ShoppingList extends ArrayList<ListItem> {
         private int newIndex = -1;
         private int removedId = -1;
         private boolean removedIsChecked = false;
+        private String removedDescription = null;
 
         public Event(int state) {
             this.state = state;
@@ -338,9 +342,17 @@ public class ShoppingList extends ArrayList<ListItem> {
             return removedIsChecked;
         }
 
+        public String getRemovedDescription() {
+            return removedDescription;
+        }
+
         public void setRemovedItem(int id, boolean isChecked) {
             this.removedId = id;
             this.removedIsChecked = isChecked;
+        }
+
+        public void setRemovedDescription(String desc) {
+            this.removedDescription = desc;
         }
 
     }

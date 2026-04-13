@@ -32,6 +32,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.URLEncoder;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -158,10 +159,12 @@ class ShoppingListsManager {
                 if (eventState == ShoppingList.Event.ITEM_REMOVED) {
                     int removedId = e.getRemovedId();
                     boolean removedIsChecked = e.getRemovedIsChecked();
-                    if (!metadata.locallyModifiedChecked.containsKey(removedId)) {
-                        metadata.locallyDeletedIds.add(removedId);
-                    }
+                    String removedDesc = e.getRemovedDescription();
+                    metadata.locallyDeletedIds.add(removedId);
                     metadata.locallyModifiedChecked.put(removedId, removedIsChecked);
+                    if (removedDesc != null) {
+                        metadata.locallyDeletedDescriptions.add(removedDesc.toLowerCase());
+                    }
                 } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
                     if (index >= 0 && index < list.size()) {
@@ -174,6 +177,7 @@ class ShoppingListsManager {
                     if (index >= 0 && index < list.size()) {
                         int id = list.getId(index);
                         metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
+                        metadata.locallyNewIds.add(id);
                     }
                 }
                 try {
@@ -199,6 +203,9 @@ class ShoppingListsManager {
 
         Map<Integer, Boolean> localCheckedChanges = new HashMap<>(metadata.locallyModifiedChecked);
         Set<Integer> localDeletions = new HashSet<>(metadata.locallyDeletedIds);
+        Set<Integer> localNewIds = new HashSet<>(metadata.locallyNewIds);
+        Set<String> localDeletedDescriptions = new HashSet<>(metadata.locallyDeletedDescriptions);
+        List<ListItem> localNewItems = new ArrayList<>(metadata.shoppingList);
 
         try {
             File file = new File(metadata.filename);
@@ -211,28 +218,50 @@ class ShoppingListsManager {
 
                 metadata.shoppingList.clear();
 
+                // Build a map of descriptions to checked state from local changes
+                Map<String, Boolean> localCheckedByDesc = new HashMap<>();
+                for (Map.Entry<Integer, Boolean> entry : localCheckedChanges.entrySet()) {
+                    int id = entry.getKey();
+                    Boolean checked = entry.getValue();
+                    for (ListItem item : localNewItems) {
+                        if (((ListItem.ListItemWithID) item).getId() == id) {
+                            localCheckedByDesc.put(item.getDescription().toLowerCase(), checked);
+                            break;
+                        }
+                    }
+                }
+
                 for (int i = 0; i < latestList.size(); i++) {
-                    int id = latestList.getId(i);
-                    if (localDeletions.contains(id)) {
+                    ListItem item = latestList.get(i);
+                    int fileItemId = latestList.getId(i);
+                    String descLower = item.getDescription().toLowerCase();
+                    // Skip items that were marked as deleted locally (by ID or by description)
+                    if (localDeletions.contains(fileItemId) || localDeletedDescriptions.contains(descLower)) {
                         continue;
                     }
-                    ListItem item = latestList.get(i);
-                    if (localCheckedChanges.containsKey(id)) {
-                        item.setChecked(localCheckedChanges.get(id));
+                    if (localCheckedByDesc.containsKey(descLower)) {
+                        item.setChecked(localCheckedByDesc.get(descLower));
                     }
                     metadata.shoppingList.add(item);
                 }
 
-                for (Integer changedId : localCheckedChanges.keySet()) {
-                    if (!fileIds.contains(changedId) && !localDeletions.contains(changedId)) {
-                        boolean checkedStatus = localCheckedChanges.get(changedId);
-                        ListItem reAddItem = new ListItem(checkedStatus, "", "");
-                        metadata.shoppingList.add(new ListItem.ListItemWithID(changedId, reAddItem));
+                for (Integer newId : localNewIds) {
+                    if (!fileIds.contains(newId)) {
+                        // Find the original item from before we cleared the list
+                        for (int i = 0; i < localNewItems.size(); i++) {
+                            ListItem item = localNewItems.get(i);
+                            if (((ListItem.ListItemWithID) item).getId() == newId) {
+                                metadata.shoppingList.add(item);
+                                break;
+                            }
+                        }
                     }
                 }
             }
             metadata.locallyModifiedChecked.clear();
             metadata.locallyDeletedIds.clear();
+            metadata.locallyNewIds.clear();
+            metadata.locallyDeletedDescriptions.clear();
             metadata.isDirty = true;
             writeToFile(metadata);
         } finally {
@@ -249,9 +278,9 @@ class ShoppingListsManager {
             OutputStream os = new FileOutputStream(metadata.filename);
             ShoppingListMarshaller.marshall(os, metadata.shoppingList);
             metadata.isDirty = false;
-            Log.d(getClass().getSimpleName(), "Wrote file immediately: " + metadata.filename);
         } finally {
-            metadata.isSyncing = false;
+            // Don't reset isSyncing here - let relistAndWrite's finally block handle it
+            // This prevents FileObserver from reloading while we're still processing
         }
     }
 
@@ -373,6 +402,8 @@ class ShoppingListsManager {
         private ShoppingList.ShoppingListListener updateListener;
         private Map<Integer, Boolean> locallyModifiedChecked = new HashMap<>();
         private Set<Integer> locallyDeletedIds = new HashSet<>();
+        private Set<Integer> locallyNewIds = new HashSet<>();
+        private Set<String> locallyDeletedDescriptions = new HashSet<>();
 
         private ShoppingListMetadata(ShoppingList shoppingList, String filename) {
             this.shoppingList = shoppingList;

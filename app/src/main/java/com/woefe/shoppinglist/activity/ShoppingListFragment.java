@@ -20,11 +20,15 @@
 package com.woefe.shoppinglist.activity;
 
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.WindowManager;
 
 import androidx.annotation.Nullable;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
 import androidx.recyclerview.widget.DividerItemDecoration;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -60,6 +64,21 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
 
         recyclerView = rootView.findViewById(R.id.shoppingListView);
         registerForContextMenu(recyclerView);
+
+        View editBarLayout = rootView.findViewById(R.id.layout_add_item);
+        ViewCompat.setOnApplyWindowInsetsListener(editBarLayout, (v, windowInsets) -> {
+            int imeBottom = windowInsets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            int navBottom = windowInsets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom;
+            int bottomMargin = Math.max(imeBottom, navBottom);
+
+            android.widget.RelativeLayout.LayoutParams params =
+                    (android.widget.RelativeLayout.LayoutParams) v.getLayoutParams();
+            if (params.bottomMargin != bottomMargin) {
+                params.bottomMargin = bottomMargin;
+                v.setLayoutParams(params);
+            }
+            return windowInsets;
+        });
 
         recyclerView.setHasFixedSize(true);
 

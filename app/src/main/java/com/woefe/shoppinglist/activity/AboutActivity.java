@@ -19,15 +19,20 @@
 
 package com.woefe.shoppinglist.activity;
 
+import android.content.res.Configuration;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Html;
 import android.text.method.LinkMovementMethod;
+import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 
 import com.woefe.shoppinglist.BuildConfig;
 import com.woefe.shoppinglist.R;
@@ -42,11 +47,24 @@ public class AboutActivity extends AppCompatActivity {
 	protected void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 
+		WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+
 		setContentView(R.layout.activity_about);
+
+		getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+		getWindow().getDecorView().setSystemUiVisibility(
+			isLightMode() ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0);
 
 		final Toolbar toolbar = findViewById(R.id.toolbar_about);
 		toolbar.setTitle(R.string.about);
 		setSupportActionBar(toolbar);
+		
+		int currentHeight = toolbar.getLayoutParams().height;
+        if (currentHeight > 0) {
+            toolbar.getLayoutParams().height = currentHeight + 48;
+        }
+        toolbar.setPadding(toolbar.getPaddingLeft(), toolbar.getPaddingTop() + 48,
+            toolbar.getPaddingRight(), toolbar.getPaddingBottom());
 
 		ActionBar actionBar = getSupportActionBar();
 		if (actionBar != null) {
@@ -72,5 +90,10 @@ public class AboutActivity extends AppCompatActivity {
 		textView.append("\n");
 		textView.append("\n");
 		textView.append(Html.fromHtml(getString(R.string.about_contributors)));
+	}
+	
+	private boolean isLightMode() {
+		int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+		return currentNightMode == Configuration.UI_MODE_NIGHT_NO;
 	}
 }

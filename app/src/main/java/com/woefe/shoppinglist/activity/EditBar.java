@@ -30,7 +30,6 @@ import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
-import android.widget.ImageButton;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,7 +37,6 @@ import android.widget.Toast;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-
 import com.woefe.shoppinglist.R;
 import com.woefe.shoppinglist.shoppinglist.ShoppingList;
 
@@ -65,7 +63,7 @@ public class EditBar implements ShoppingList.ShoppingListListener {
     public EditBar(View boundView, final Context ctx) {
         this.ctx = ctx;
         this.layout = boundView.findViewById(R.id.layout_add_item);
-        final ImageButton button = boundView.findViewById(R.id.button_add_new_item);
+        final FloatingActionButton button = boundView.findViewById(R.id.button_add_new_item);
         this.descriptionText = boundView.findViewById(R.id.new_item_description);
         this.quantityText = boundView.findViewById(R.id.new_item_quantity);
         this.duplicateWarnText = boundView.findViewById(R.id.text_warn);
@@ -134,10 +132,8 @@ public class EditBar implements ShoppingList.ShoppingListListener {
         }
     }
 
-    private void setButtonEnabled(ImageButton button, boolean enabled) {
+    private void setButtonEnabled(FloatingActionButton button, boolean enabled) {
         button.setEnabled(enabled);
-        button.setClickable(enabled);
-        button.setImageAlpha(enabled ? 255 : 100);
     }
 
     private void onConfirm() {

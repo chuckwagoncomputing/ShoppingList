@@ -22,7 +22,7 @@
     android:id="@+id/toolbar_main"
     android:layout_width="match_parent"
     android:layout_height="?attr/actionBarSize"
-    android:background="?attr/colorPrimary"
+    android:background="?attr/colorPrimaryContainer"
     android:elevation="4dp"
     android:theme="@style/Toolbar"
-    app:titleTextColor="@android:color/white" />
+    app:titleTextColor="?attr/colorOnPrimaryContainer" />

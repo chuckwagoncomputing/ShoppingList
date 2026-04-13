@@ -19,17 +19,19 @@
 
 package com.woefe.shoppinglist.dialog;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Context;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Html;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.DialogFragment;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.woefe.shoppinglist.R;
 
 /**
@@ -71,8 +73,15 @@ public class ConfirmationDialog extends DialogFragment {
             message = savedInstanceState.getString(KEY_MESSAGE);
         }
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(getActivity(), R.style.AppDialogTheme);
-        builder.setMessage(Html.fromHtml(message))
+        CharSequence htmlText;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            htmlText = Html.fromHtml(message, Html.FROM_HTML_MODE_LEGACY);
+        } else {
+            htmlText = Html.fromHtml(message);
+        }
+
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
+        builder.setMessage(htmlText)
                 .setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
                     @Override
                     public void onClick(DialogInterface dialog, int which) {

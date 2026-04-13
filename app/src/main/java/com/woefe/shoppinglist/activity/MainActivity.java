@@ -19,13 +19,23 @@
 
 package com.woefe.shoppinglist.activity;
 
+import androidx.annotation.RequiresApi;
+import androidx.core.content.ContextCompat;
+import androidx.core.view.WindowCompat;
 import android.content.Intent;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.Drawable;
+import android.content.res.Configuration;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
@@ -40,7 +50,11 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.ShareActionProvider;
 import androidx.appcompat.widget.Toolbar;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.MenuItemCompat;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.drawerlayout.widget.DrawerLayout;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -76,10 +90,32 @@ public class MainActivity extends BinderActivity implements
     private ShareActionProvider actionProvider;
     private int lastTheme;
 
+    @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Enable edge-to-edge so we draw behind system bars
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        
         setContentView(R.layout.activity_main);
+
+        // Make status bar and navigation bar transparent
+        getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
+        
+        // Set light/dark status bar icons based on theme
+        getWindow().getDecorView().setSystemUiVisibility(
+            isLightMode() ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0);
+
+        final Toolbar toolbar = findViewById(R.id.toolbar_main);
+        
+        int currentHeight = toolbar.getLayoutParams().height;
+        if (currentHeight > 0) {
+            toolbar.getLayoutParams().height = currentHeight + 48;
+        }
+        toolbar.setPadding(toolbar.getPaddingLeft(), toolbar.getPaddingTop() + 48,
+            toolbar.getPaddingRight(), toolbar.getPaddingBottom());
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -103,9 +139,8 @@ public class MainActivity extends BinderActivity implements
             }
         });
         lastTheme = AppCompatDelegate.getDefaultNightMode();
-
-        final Toolbar toolbar = findViewById(R.id.toolbar_main);
-        toolbar.setNavigationIcon(R.drawable.ic_menu_white_24dp);
+        
+        toolbar.setNavigationIcon(R.drawable.ic_menu_24dp);
         setSupportActionBar(toolbar);
 
         ActionBar actionBar = getSupportActionBar();
@@ -410,5 +445,10 @@ public class MainActivity extends BinderActivity implements
 			snackbarView = findViewById(R.id.fab_add_parent);
 		}
 		return Snackbar.make(snackbarView, R.string.item_deleted, Snackbar.LENGTH_LONG);
+	}
+	
+	private boolean isLightMode() {
+		int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+		return currentNightMode == Configuration.UI_MODE_NIGHT_NO;
 	}
 }

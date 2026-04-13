@@ -20,14 +20,19 @@
 package com.woefe.shoppinglist;
 
 import android.app.Application;
+import android.os.Build;
 
 import androidx.appcompat.app.AppCompatDelegate;
+import com.google.android.material.color.DynamicColors;
 
 public class ShoppingListApplication extends Application {
 
     @Override
     public void onCreate() {
         super.onCreate();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            DynamicColors.applyToActivitiesIfAvailable(this);
+        }
         SettingsRepository settingsRepository = new SettingsRepository(this);
         AppCompatDelegate.setDefaultNightMode(settingsRepository.getTheme());
     }

@@ -19,6 +19,7 @@
 
 package com.woefe.shoppinglist.dialog;
 
+import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
 import android.util.Log;
@@ -27,7 +28,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -38,6 +38,9 @@ import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentActivity;
 import androidx.fragment.app.FragmentManager;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.textfield.TextInputEditText;
+import com.google.android.material.textfield.TextInputLayout;
 import com.woefe.shoppinglist.R;
 
 public class TextInputDialog extends DialogFragment {
@@ -49,7 +52,7 @@ public class TextInputDialog extends DialogFragment {
     private String message;
     private String hint;
     private int action;
-    private EditText inputField;
+    private TextInputEditText inputField;
 
 
     public interface TextInputDialogListener {
@@ -69,60 +72,30 @@ public class TextInputDialog extends DialogFragment {
         }
     }
 
-    @Nullable
+    @NonNull
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
-        super.onCreateView(inflater, container, savedInstanceState);
+    public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
 
-        String inputText = "";
-        if (savedInstanceState != null) {
-            message = savedInstanceState.getString(KEY_MESSAGE);
-            hint = savedInstanceState.getString(KEY_HINT);
-            inputText = savedInstanceState.getString(KEY_INPUT);
-        }
-
-        View dialogRoot = inflater.inflate(R.layout.dialog_text_input, container, false);
+        View dialogRoot = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_text_input, null);
         TextView label = dialogRoot.findViewById(R.id.dialog_label);
-        Button cancelButton = dialogRoot.findViewById(R.id.button_dialog_cancel);
-        Button okButton = dialogRoot.findViewById(R.id.button_dialog_ok);
+        TextInputLayout textInputLayout = dialogRoot.findViewById(R.id.text_input_layout);
         label.setText(message);
+        textInputLayout.setHint(hint);
 
         inputField = dialogRoot.findViewById(R.id.dialog_text_field);
-        inputField.setHint(hint);
-        inputField.setText(inputText);
         inputField.requestFocus();
 
-        inputField.setOnEditorActionListener(new TextView.OnEditorActionListener() {
-            @Override
-            public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
-                onInputComplete();
-                return true;
-            }
-        });
+        builder.setView(dialogRoot)
+                .setPositiveButton(R.string.ok, (dialog, which) -> {
+                    String input = inputField.getText().toString();
+                    if (onValidateInput(input)) {
+                        listener.onInputComplete(input, action);
+                    }
+                })
+                .setNegativeButton(R.string.cancel, (dialog, which) -> dismiss());
 
-        cancelButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                dismiss();
-            }
-        });
-
-        okButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                onInputComplete();
-            }
-        });
-
-        return dialogRoot;
-    }
-
-    private void onInputComplete() {
-        String input = inputField.getText().toString();
-        if (onValidateInput(input)) {
-            listener.onInputComplete(input, action);
-            dismiss();
-        }
+        return builder.create();
     }
 
     public boolean onValidateInput(String input) {
@@ -134,7 +107,12 @@ public class TextInputDialog extends DialogFragment {
         super.onSaveInstanceState(outState);
         outState.putString(KEY_MESSAGE, message);
         outState.putString(KEY_HINT, hint);
-        outState.putString(KEY_INPUT, inputField.getText().toString());
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        inputField = null;
     }
 
     public static class Builder {

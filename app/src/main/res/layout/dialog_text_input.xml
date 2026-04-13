@@ -17,46 +17,30 @@
   ~ along with this program.  If not, see <http://www.gnu.org/licenses/>.
   -->
 
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:padding="10dp"
-    android:background="@color/colorBackgroundLight">
+    android:padding="24dp">
 
     <TextView
         android:id="@+id/dialog_label"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:labelFor="@+id/dialog_text_field"
-        android:padding="5dp"
-        android:textAppearance="@style/TextAppearance.AppCompat.Title" />
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
-    <EditText
-        android:id="@+id/dialog_text_field"
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/text_input_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentStart="true"
-        android:layout_below="@+id/dialog_label"
-        android:inputType="text" />
+        android:layout_marginTop="16dp"
+        style="@style/Widget.Material3.TextInputLayout.OutlinedBox">
 
-    <Button
-        android:id="@+id/button_dialog_cancel"
-        style="?android:attr/borderlessButtonStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/dialog_text_field"
-        android:layout_toStartOf="@+id/button_dialog_ok"
-        android:text="@string/cancel"
-        android:textColor="@color/colorAccent" />
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/dialog_text_field"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:inputType="text" />
 
-    <Button
-        android:id="@+id/button_dialog_ok"
-        style="?android:attr/borderlessButtonStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentEnd="true"
-        android:layout_below="@+id/dialog_text_field"
-        android:text="@string/ok"
-        android:textColor="@color/colorAccent" />
-</RelativeLayout>
+    </com.google.android.material.textfield.TextInputLayout>
+</LinearLayout>

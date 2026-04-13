@@ -18,32 +18,32 @@
   -->
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
-	android:layout_width="match_parent"
-	android:layout_height="match_parent"
-	android:fitsSystemWindows="true">
+ 	android:layout_width="match_parent"
+ 	android:layout_height="match_parent"
+ 	android:background="?attr/colorSurface">
 
 <androidx.appcompat.widget.Toolbar
-		xmlns:app="http://schemas.android.com/apk_res-auto"
-		android:id="@+id/toolbar_about"
-		android:layout_width="match_parent"
-		android:layout_height="?attr/actionBarSize"
-		android:background="?attr/colorPrimary"
-		android:elevation="4dp"
-		android:theme="@style/Toolbar"
-		app:titleTextColor="@android:color/white" />
+ 		xmlns:app="http://schemas.android.com/apk/res-auto"
+ 		android:id="@+id/toolbar_about"
+ 		android:layout_width="match_parent"
+ 		android:layout_height="?attr/actionBarSize"
+ 		android:background="?attr/colorPrimaryContainer"
+ 		android:elevation="4dp"
+ 		android:theme="@style/Toolbar"
+ 		app:titleTextColor="?attr/colorOnPrimaryContainer" />
 
 	<ScrollView
 		android:layout_width="match_parent"
 		android:layout_height="match_parent"
 		android:layout_below="@id/toolbar_about"
-		android:background="@color/colorBackground">
+android:background="?attr/colorSurface">
 
-		<TextView
-			android:id="@+id/about_text"
-			android:padding="7dp"
-			android:layout_width="match_parent"
-			android:layout_height="wrap_content"
-			android:textAppearance="@style/TextAppearance.AppCompat.Medium"
-			android:textColor="@color/textColor" />
+ 		<TextView
+ 			android:id="@+id/about_text"
+ 			android:padding="7dp"
+ 			android:layout_width="match_parent"
+ 			android:layout_height="wrap_content"
+ 			android:textAppearance="@style/TextAppearance.AppCompat.Medium"
+ 			android:textColor="?attr/colorOnSurface" />
 	</ScrollView>
 </RelativeLayout>

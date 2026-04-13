@@ -18,9 +18,12 @@
   -->
 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/shopping_list_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:fitsSystemWindows="false"
     android:orientation="vertical"
     tools:context=".activity.MainActivity">
 
@@ -76,7 +79,9 @@
             android:layout_height="wrap_content"
             android:layout_below="@id/text_warn"
             android:layout_alignParentStart="true"
-            android:layout_marginTop="4dp">
+            android:layout_marginTop="4dp"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
 
             <EditText
                 android:id="@+id/new_item_description"
@@ -87,28 +92,26 @@
                 android:singleLine="true" />
         </com.google.android.material.textfield.TextInputLayout>
 
-        <ImageButton
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/button_add_new_item"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_below="@id/new_item_descriptionParent"
             android:layout_marginTop="6dp"
-            android:layout_marginEnd="4dp"
+            android:layout_marginEnd="12dp"
             android:contentDescription="@string/done"
-            android:paddingBottom="6dp"
-            android:paddingEnd="20dp"
-            android:paddingStart="20dp"
-            android:paddingTop="6dp"
-            android:background="@drawable/button_add_selector"
-            android:src="@drawable/ic_done_white_24dp" />
+            app:fabSize="mini"
+            app:srcCompat="@drawable/ic_done_white_24dp" />
 
         <com.google.android.material.textfield.TextInputLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_below="@id/new_item_descriptionParent"
             android:layout_alignParentStart="true"
-            android:layout_toStartOf="@id/button_add_new_item">
+            android:layout_toStartOf="@id/button_add_new_item"
+            android:paddingStart="8dp"
+            android:paddingEnd="8dp">
 
             <EditText
                 android:id="@+id/new_item_quantity"

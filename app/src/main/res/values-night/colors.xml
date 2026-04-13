@@ -25,9 +25,17 @@
     <color name="colorListItemBackground">#000000</color>
     <color name="colorBackgroundLight">#212121</color>
     <color name="colorBackground">#000000</color>
+    <color name="colorSurface">#121212</color>
+    <color name="colorOnSurface">#FFFFFF</color>
     <color name="colorPrimary">#388E3C</color>
     <color name="colorPrimaryDark">#1B5E20</color>
+    <color name="colorPrimaryContainer">#1B5E20</color>
+    <color name="colorOnPrimaryContainer">#FFFFFF</color>
+    <color name="colorSurfaceContainerHighest">#49454F</color>
+    <color name="colorSecondaryContainer">#33691E</color>
+    <color name="colorOnSecondaryContainer">#C5E1A5</color>
     <color name="colorSecondaryLight">#FFC046</color>
     <color name="colorAccent">#FF8F00</color>
     <color name="colorCritical">#FF5722</color>
+    <color name="drawer_item_text_selected">#A5D6A7</color>
 </resources>

@@ -23,11 +23,20 @@
     <color name="textColorDefault">#000000</color>
     <color name="textColorChecked">#CCCCCC</color>
     <color name="colorListItemBackground">@android:color/background_light</color>
+    <color name="colorSurfaceFallback">#FFFFFF</color>
     <color name="colorBackgroundLight">#FFFFFF</color>
     <color name="colorBackground">#FFFFFF</color>
+    <color name="colorSurface">#FFFFFF</color>
+    <color name="colorOnSurface">#000000</color>
     <color name="colorPrimary">#388E3C</color>
     <color name="colorPrimaryDark">#1B5E20</color>
+    <color name="colorPrimaryContainer">#388E3C</color>
+    <color name="colorOnPrimaryContainer">#FFFFFF</color>
+    <color name="colorSurfaceContainerHighest">#E7E0EC</color>
+    <color name="colorSecondaryContainer">#C8E6C9</color>
+    <color name="colorOnSecondaryContainer">#1B5E20</color>
     <color name="colorSecondaryLight">#FFC046</color>
     <color name="colorAccent">#FF8F00</color>
     <color name="colorCritical">#FF5722</color>
+    <color name="drawer_item_text_selected">#1B5E20</color>
 </resources>

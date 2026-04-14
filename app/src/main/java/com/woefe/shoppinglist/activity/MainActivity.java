@@ -23,6 +23,7 @@ import androidx.annotation.RequiresApi;
 import androidx.core.content.ContextCompat;
 import androidx.core.view.WindowCompat;
 import android.content.Intent;
+import android.graphics.Color;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.content.res.Configuration;
@@ -154,6 +155,7 @@ public class MainActivity extends BinderActivity implements
         prefs = getSharedPreferences("shopping_list_prefs", MODE_PRIVATE);
         
         toolbar.setNavigationIcon(R.drawable.ic_menu_24dp);
+        toolbar.setNavigationContentDescription(getString(R.string.app_name));
         setSupportActionBar(toolbar);
 
         ActionBar actionBar = getSupportActionBar();

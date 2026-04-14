@@ -3,6 +3,12 @@
     <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:dialogTheme">@style/AppDialogTheme</item>
         <item name="android:alertDialogTheme">@style/AppAlertTheme</item>
+        <item name="android:colorControlNormal">?attr/colorOnPrimaryContainer</item>
+        <item name="android:textAppearance">@style/AppPopupMenuText</item>
+        <item name="android:itemTextAppearance">@style/AppPopupMenuText</item>
+        <item name="popupMenuStyle">@style/AppPopupMenu</item>
+        <item name="actionOverflowMenuStyle">@style/AppPopupMenu</item>
+        <item name="actionBarPopupTheme">@style/AppPopupMenuOverlay</item>
     </style>
 
     <style name="AppDialogTheme" parent="Theme.Material3.DayNight.Dialog">
@@ -30,6 +36,20 @@
 
     <style name="Toolbar" parent="ThemeOverlay.Material3.ActionBar">
         <item name="android:textColor">?attr/colorOnPrimaryContainer</item>
-        <item name="android:colorControlNormal">?attr/colorOnSurface</item>
+        <item name="android:colorControlNormal">?attr/colorOnPrimaryContainer</item>
+    </style>
+
+    <style name="AppPopupMenu" parent="Widget.Material3.PopupMenu">
+        <item name="android:popupBackground">?attr/colorSurface</item>
+        <item name="android:itemTextAppearance">@style/AppPopupMenuText</item>
+    </style>
+
+    <style name="AppPopupMenuText" parent="TextAppearance.Material3.BodyLarge">
+        <item name="android:textColor">?attr/colorOnSurface</item>
+    </style>
+
+    <style name="AppPopupMenuOverlay" parent="ThemeOverlay.Material3.DynamicColors.Dark">
+        <item name="android:colorBackground">?attr/colorSurface</item>
+        <item name="android:textColor">?attr/colorOnSurface</item>
     </style>
 </resources>

@@ -48,7 +48,7 @@
 
     <ImageView
         android:id="@+id/drag_n_drop_handler"
-        android:layout_width="32dp"
+        android:layout_width="48dp"
         android:layout_gravity="center"
         android:src="@drawable/ic_swap_vert_24dp"
         android:alpha="0.4"

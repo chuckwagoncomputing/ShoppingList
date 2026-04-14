@@ -47,6 +47,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
                     notifyItemMoved(e.getOldIndex(), e.getNewIndex());
                     break;
                 case ShoppingList.Event.ITEM_REMOVED:
+                    Log.d("RecyclerListAdapter", "ITEM_REMOVED at index " + e.getIndex() + ", list size " + shoppingList.size());
                     notifyItemRemoved(e.getIndex());
                     break;
                 default:
@@ -196,17 +197,10 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             super.onSelectedChanged(viewHolder, actionState);
         }
 
-        @Override
-        public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-            super.clearView(recyclerView, viewHolder);
-            if (shoppingList != null) {
-                try {
-                    mainActivity.requestSync();
-                } catch (Exception e) {
-                    Log.e("RecyclerListCallback", "Failed to sync after drag", e);
-                }
-            }
-        }
+@Override
+    public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+        super.clearView(recyclerView, viewHolder);
+    }
 
         @Override
         public boolean isItemViewSwipeEnabled() {

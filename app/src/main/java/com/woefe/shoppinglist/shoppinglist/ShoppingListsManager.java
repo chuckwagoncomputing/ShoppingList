@@ -166,6 +166,20 @@ class ShoppingListsManager {
                     if (removedDesc != null) {
                         metadata.locallyDeletedDescriptions.add(removedDesc.toLowerCase());
                     }
+                    metadata.isDirty = true;
+                    boolean hadListener = metadata.updateListener != null;
+                    if (hadListener) {
+                        metadata.shoppingList.removeListener(metadata.updateListener);
+                    }
+                    try {
+                        writeToFile(metadata);
+                    } catch (IOException ex) {
+                        Log.e(TAG, "Failed to write after delete", ex);
+                    } finally {
+                        if (hadListener) {
+                            metadata.shoppingList.addListener(metadata.updateListener);
+                        }
+                    }
                 } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
                     if (index >= 0 && index < list.size()) {
@@ -187,7 +201,24 @@ class ShoppingListsManager {
                         int id = list.getId(index);
                         metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
                         metadata.locallyNewIds.add(id);
+                        metadata.locallyDeletedIds.remove(id);
+                        metadata.locallyDeletedDescriptions.remove(list.get(index).getDescription().toLowerCase());
                     }
+                    metadata.isDirty = true;
+                    boolean hadListener = metadata.updateListener != null;
+                    if (hadListener) {
+                        metadata.shoppingList.removeListener(metadata.updateListener);
+                    }
+                    try {
+                        writeToFile(metadata);
+                    } catch (IOException ex) {
+                        Log.e(TAG, "Failed to write after insert", ex);
+                    } finally {
+                        if (hadListener) {
+                            metadata.shoppingList.addListener(metadata.updateListener);
+                        }
+                    }
+                    return;
                 } else if (eventState == ShoppingList.Event.OTHER) {
                     return;
                 }
@@ -310,6 +341,7 @@ class ShoppingListsManager {
             OutputStream os = new FileOutputStream(metadata.filename);
             ShoppingListMarshaller.marshall(os, metadata.shoppingList);
             metadata.isDirty = false;
+            Log.d(TAG, "writeToFile: wrote " + metadata.shoppingList.size() + " items");
         } finally {
             metadata.isSyncing = false;
         }
@@ -323,6 +355,7 @@ class ShoppingListsManager {
                 switch (event) {
                     case FileObserver.CLOSE_WRITE:
                         handler.post(() -> {
+                            Log.d(TAG, "FileObserver: CLOSE_WRITE, isSyncing=" + metadata.isSyncing + ", list size before=" + metadata.shoppingList.size());
                             if (!metadata.isSyncing) {
                                 metadata.isSyncing = true;
                                 boolean hadListener = metadata.updateListener != null;
@@ -334,6 +367,7 @@ class ShoppingListsManager {
                                     metadata.shoppingList.clear();
                                     metadata.shoppingList.addAll(list);
                                     metadata.isDirty = false;
+                                    Log.d(TAG, "FileObserver: reloaded list size=" + metadata.shoppingList.size());
 
                                     String oldName = metadata.shoppingList.getName();
                                     rename(oldName, list.getName());

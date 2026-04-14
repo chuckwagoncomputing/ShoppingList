@@ -49,7 +49,7 @@ public class SettingsActivity extends AppCompatActivity {
 		getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
 		getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
 		getWindow().getDecorView().setSystemUiVisibility(
-			isLightMode() ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0);
+			View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
 		final Toolbar toolbar = findViewById(R.id.toolbar_settings);
 		toolbar.setTitle(R.string.action_settings);

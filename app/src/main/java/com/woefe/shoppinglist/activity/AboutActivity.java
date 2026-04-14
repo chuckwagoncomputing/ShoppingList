@@ -53,7 +53,7 @@ public class AboutActivity extends AppCompatActivity {
 
 		getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
 		getWindow().getDecorView().setSystemUiVisibility(
-			isLightMode() ? View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR : 0);
+			View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
 		final Toolbar toolbar = findViewById(R.id.toolbar_about);
 		toolbar.setTitle(R.string.about);

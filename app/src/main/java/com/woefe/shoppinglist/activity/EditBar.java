@@ -188,10 +188,10 @@ public class EditBar implements ShoppingList.ShoppingListListener {
                 final float end = e2.getY();
 
                 if (end - start > slop) {
-                    showFAB();
+                    hideFAB();
                     start = end;
                 } else if (end - start < -slop) {
-                    hideFAB();
+                    showFAB();
                     start = end;
                 }
                 return super.onScroll(e1, e2, distanceX, distanceY);

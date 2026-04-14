@@ -94,7 +94,7 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
 
         editBar = new EditBar(rootView, getActivity());
         editBar.addEditBarListener(this);
-        editBar.enableAutoHideFAB(recyclerView);
+        
 
         if (savedInstanceState != null) {
             editBar.restoreState(savedInstanceState);

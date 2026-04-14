@@ -20,6 +20,7 @@
 package com.woefe.shoppinglist.shoppinglist;
 
 import android.os.Build;
+import android.util.Log;
 
 import androidx.annotation.NonNull;
 
@@ -227,14 +228,11 @@ public class ShoppingList extends ArrayList<ListItem> {
 
 
     public void removeAllCheckedItems() {
-        List<Integer> toRemoveIndices = new ArrayList<>();
-        for (int i = 0; i < size(); i++) {
-            if (get(i).isChecked()) {
-                toRemoveIndices.add(i);
+        java.util.Iterator<ListItem> iter = iterator();
+        while (iter.hasNext()) {
+            if (iter.next().isChecked()) {
+                iter.remove();
             }
-        }
-        for (int i = toRemoveIndices.size() - 1; i >= 0; i--) {
-            remove(toRemoveIndices.get(i));
         }
     }
 

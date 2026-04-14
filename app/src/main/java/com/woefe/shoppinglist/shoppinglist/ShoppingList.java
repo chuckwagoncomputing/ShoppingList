@@ -20,6 +20,8 @@
 package com.woefe.shoppinglist.shoppinglist;
 
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -258,7 +260,9 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     private void notifyListChanged(ShoppingList.Event event) {
         for (ShoppingListListener listener : new LinkedList<>(listeners)) {
-            listener.onShoppingListUpdate(this, event);
+            new Handler(Looper.getMainLooper()).post(() -> {
+                    listener.onShoppingListUpdate(this, event);
+            });
         }
     }
 

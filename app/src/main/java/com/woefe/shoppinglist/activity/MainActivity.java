@@ -477,6 +477,9 @@ public class MainActivity extends BinderActivity implements
                 if (!getBinder().hasList(currentListName)) {
                     selectList(0);
                 }
+                if (currentFragment != null && currentFragment instanceof ShoppingListFragment) {
+                    ((ShoppingListFragment) currentFragment).setShoppingList(getBinder().getList(currentListName));
+                }
             }
         });
     }

@@ -83,9 +83,11 @@ class ShoppingListsManager {
                         shoppingListsMetadata.removeByFile(file.getPath());
                         break;
                     case FileObserver.CREATE:
-                    case FileObserver.MODIFY:
-                        // workaround: When CREATE is triggered, the file might still be empty.
                         SystemClock.sleep(100);
+                        loadFromFile(file);
+                        break;
+                    case FileObserver.CLOSE_WRITE:
+                    case FileObserver.MODIFY:
                         loadFromFile(file);
                         break;
                 }
@@ -140,11 +142,46 @@ class ShoppingListsManager {
         }
     }
 
+    private long lastReloadTime = 0;
+    private String lastReloadedPath = null;
+
     private void loadFromFile(File file) {
+        String filePath = file.getPath();
+        long now = SystemClock.elapsedRealtime();
+        if (lastReloadedPath != null && lastReloadedPath.equals(filePath) && (now - lastReloadTime) < 200) {
+            return;
+        }
+        lastReloadedPath = filePath;
+        lastReloadTime = now;
+
         try {
-            final ShoppingList list = ShoppingListUnmarshaller.unmarshal(file.getPath());
-            addShoppingList(list, file.getPath());
-            Log.v(TAG, "Successfully loaded file: " + file);
+            final ShoppingList list = ShoppingListUnmarshaller.unmarshal(filePath);
+            ShoppingListMetadata existing = shoppingListsMetadata.getByFile(filePath);
+            if (existing != null) {
+                boolean hadListener = existing.updateListener != null;
+                if (hadListener) {
+                    existing.shoppingList.removeListener(existing.updateListener);
+                }
+                existing.isSyncing = true;
+                try {
+                    existing.shoppingList.clear();
+                    for (int i = 0; i < list.size(); i++) {
+                        existing.shoppingList.add(list.get(i));
+                    }
+                    existing.isDirty = false;
+                    rename(existing.shoppingList.getName(), list.getName());
+                    shoppingListsMetadata.notifyListeners();
+                } catch (Exception e) {
+                    Log.e(TAG, "Error during loadFromFile update", e);
+                } finally {
+                    existing.isSyncing = false;
+                    if (hadListener) {
+                        existing.shoppingList.addListener(existing.updateListener);
+                    }
+                }
+            } else {
+                addShoppingList(list, file.getPath());
+            }
         } catch (IOException | UnmarshallException e) {
             Log.v(getClass().getSimpleName(), "Ignoring file " + file);
         }
@@ -178,18 +215,10 @@ class ShoppingListsManager {
                         metadata.locallyDeletedDescriptions.add(removedDesc.toLowerCase());
                     }
                     metadata.isDirty = true;
-                    boolean hadListener = metadata.updateListener != null;
-                    if (hadListener) {
-                        metadata.shoppingList.removeListener(metadata.updateListener);
-                    }
                     try {
-                        writeToFile(metadata);
-                    } catch (IOException ex) {
-                        Log.e(TAG, "Failed to write after delete", ex);
-                    } finally {
-                        if (hadListener) {
-                            metadata.shoppingList.addListener(metadata.updateListener);
-                        }
+                        relistAndWrite(metadata);
+                    } catch (IOException | UnmarshallException ex) {
+                        Log.e(TAG, "Failed to relistAndWrite after delete", ex);
                     }
                 } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
@@ -216,18 +245,10 @@ class ShoppingListsManager {
                         metadata.locallyDeletedDescriptions.remove(list.get(index).getDescription().toLowerCase());
                     }
                     metadata.isDirty = true;
-                    boolean hadListener = metadata.updateListener != null;
-                    if (hadListener) {
-                        metadata.shoppingList.removeListener(metadata.updateListener);
-                    }
                     try {
-                        writeToFile(metadata);
-                    } catch (IOException ex) {
-                        Log.e(TAG, "Failed to write after insert", ex);
-                    } finally {
-                        if (hadListener) {
-                            metadata.shoppingList.addListener(metadata.updateListener);
-                        }
+                        relistAndWrite(metadata);
+                    } catch (IOException | UnmarshallException ex) {
+                        Log.e(TAG, "Failed to relistAndWrite after insert", ex);
                     }
                     return;
                 } else if (eventState == ShoppingList.Event.OTHER) {
@@ -242,7 +263,6 @@ class ShoppingListsManager {
         };
         metadata.updateListener = updateListener;
         list.addListener(updateListener);
-        setupObserver(metadata);
         shoppingListsMetadata.add(metadata);
         return metadata;
     }
@@ -348,8 +368,7 @@ class ShoppingListsManager {
 
     private void writeToFile(ShoppingListMetadata metadata) throws IOException {
         metadata.isSyncing = true;
-        try {
-            OutputStream os = new FileOutputStream(metadata.filename);
+        try (OutputStream os = new FileOutputStream(metadata.filename)) {
             ShoppingListMarshaller.marshall(os, metadata.shoppingList);
             metadata.isDirty = false;
             Log.d(TAG, "writeToFile: wrote " + metadata.shoppingList.size() + " items");

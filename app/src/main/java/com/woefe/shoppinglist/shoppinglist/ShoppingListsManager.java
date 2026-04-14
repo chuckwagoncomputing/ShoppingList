@@ -170,6 +170,11 @@ class ShoppingListsManager {
                     if (index >= 0 && index < list.size()) {
                         int id = list.getId(index);
                         metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
+                        metadata.locallyModifiedDescriptions.put(id, list.get(index).getDescription());
+                        metadata.locallyModifiedQuantities.put(id, list.get(index).getQuantity());
+                        metadata.locallyModifiedIndices.add(index);
+                        metadata.locallyModifiedNewDescriptions.put(index, list.get(index).getDescription());
+                        metadata.locallyModifiedNewQuantities.put(index, list.get(index).getQuantity());
                         metadata.locallyDeletedIds.remove(id);
                     }
                 } else if (eventState == ShoppingList.Event.ITEM_MOVED) {
@@ -212,6 +217,11 @@ class ShoppingListsManager {
         }
 
         Map<Integer, Boolean> localCheckedChanges = new HashMap<>(metadata.locallyModifiedChecked);
+        Map<Integer, String> localDescChanges = new HashMap<>(metadata.locallyModifiedDescriptions);
+        Map<Integer, String> localQtyChanges = new HashMap<>(metadata.locallyModifiedQuantities);
+        Set<Integer> localModIndices = new HashSet<>(metadata.locallyModifiedIndices);
+        Map<Integer, String> localModNewDescs = new HashMap<>(metadata.locallyModifiedNewDescriptions);
+        Map<Integer, String> localModNewQtys = new HashMap<>(metadata.locallyModifiedNewQuantities);
         Set<Integer> localDeletions = new HashSet<>(metadata.locallyDeletedIds);
         Set<Integer> localNewIds = new HashSet<>(metadata.locallyNewIds);
         Set<String> localDeletedDescriptions = new HashSet<>(metadata.locallyDeletedDescriptions);
@@ -252,6 +262,11 @@ class ShoppingListsManager {
                     if (localCheckedByDesc.containsKey(descLower)) {
                         item.setChecked(localCheckedByDesc.get(descLower));
                     }
+                    // Apply local description/quantity changes by index
+                    if (localModIndices.contains(i)) {
+                        item.setDescription(localModNewDescs.get(i));
+                        item.setQuantity(localModNewQtys.get(i));
+                    }
                     metadata.shoppingList.add(item);
                 }
 
@@ -269,6 +284,11 @@ class ShoppingListsManager {
                 }
             }
             metadata.locallyModifiedChecked.clear();
+            metadata.locallyModifiedDescriptions.clear();
+            metadata.locallyModifiedQuantities.clear();
+            metadata.locallyModifiedIndices.clear();
+            metadata.locallyModifiedNewDescriptions.clear();
+            metadata.locallyModifiedNewQuantities.clear();
             metadata.locallyDeletedIds.clear();
             metadata.locallyNewIds.clear();
             metadata.locallyDeletedDescriptions.clear();
@@ -289,8 +309,7 @@ class ShoppingListsManager {
             ShoppingListMarshaller.marshall(os, metadata.shoppingList);
             metadata.isDirty = false;
         } finally {
-            // Don't reset isSyncing here - let relistAndWrite's finally block handle it
-            // This prevents FileObserver from reloading while we're still processing
+            metadata.isSyncing = false;
         }
     }
 
@@ -411,6 +430,11 @@ class ShoppingListsManager {
         private FileObserver observer;
         private ShoppingList.ShoppingListListener updateListener;
         private Map<Integer, Boolean> locallyModifiedChecked = new HashMap<>();
+        private Map<Integer, String> locallyModifiedDescriptions = new HashMap<>();
+        private Map<Integer, String> locallyModifiedQuantities = new HashMap<>();
+        private Set<Integer> locallyModifiedIndices = new HashSet<>();
+        private Map<Integer, String> locallyModifiedNewDescriptions = new HashMap<>();
+        private Map<Integer, String> locallyModifiedNewQuantities = new HashMap<>();
         private Set<Integer> locallyDeletedIds = new HashSet<>();
         private Set<Integer> locallyNewIds = new HashSet<>();
         private Set<String> locallyDeletedDescriptions = new HashSet<>();

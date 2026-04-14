@@ -40,7 +40,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".dialog.DirectoryChooser" android:theme="@style/AppDialogTheme" />
+        <activity android:name=".dialog.DirectoryChooser" android:theme="@style/AppAlertTheme" />
         <activity android:name=".activity.SettingsActivity" android:parentActivityName=".activity.MainActivity" android:windowSoftInputMode="adjustResize"/>
         <activity android:name=".activity.AboutActivity" android:parentActivityName=".activity.MainActivity" android:windowSoftInputMode="adjustResize"/>
 

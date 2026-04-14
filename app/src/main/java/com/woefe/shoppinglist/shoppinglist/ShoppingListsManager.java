@@ -187,6 +187,8 @@ class ShoppingListsManager {
                         metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
                         metadata.locallyNewIds.add(id);
                     }
+                } else if (eventState == ShoppingList.Event.OTHER) {
+                    return;
                 }
                 try {
                     relistAndWrite(metadata);

@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -188,6 +189,23 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             this.background = new ColorDrawable();
             this.deleteIcon = ContextCompat.getDrawable(ctx, R.drawable.ic_delete_forever_white_24);
             this.backgroundColor = ContextCompat.getColor(ctx, R.color.colorCritical);
+        }
+
+        @Override
+        public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+            super.onSelectedChanged(viewHolder, actionState);
+        }
+
+        @Override
+        public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+            super.clearView(recyclerView, viewHolder);
+            if (shoppingList != null) {
+                try {
+                    mainActivity.requestSync();
+                } catch (Exception e) {
+                    Log.e("RecyclerListCallback", "Failed to sync after drag", e);
+                }
+            }
         }
 
         @Override

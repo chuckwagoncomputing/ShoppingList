@@ -546,4 +546,10 @@ public class MainActivity extends BinderActivity implements
 		int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
 		return currentNightMode == Configuration.UI_MODE_NIGHT_NO;
 	}
+
+	public void requestSync() {
+		if (currentListName != null) {
+			getBinder().reloadList(currentListName);
+		}
+	}
 }

@@ -179,11 +179,6 @@ class ShoppingListsManager {
                     }
                 } else if (eventState == ShoppingList.Event.ITEM_MOVED) {
                     metadata.isDirty = true;
-                    try {
-                        writeToFile(metadata);
-                    } catch (IOException ex) {
-                        Log.e(TAG, "Failed to write on move", ex);
-                    }
                     return;
                 } else if (eventState == ShoppingList.Event.ITEM_INSERTED) {
                     int index = e.getIndex();
@@ -427,14 +422,44 @@ class ShoppingListsManager {
         if (metadata == null) {
             return false;
         }
+        if (metadata.isDirty) {
+            try {
+                writeToFile(metadata);
+            } catch (IOException e) {
+                Log.e(TAG, "reloadList: failed to write", e);
+            }
+            metadata.isDirty = false;
+            return true;
+        }
         File file = new File(metadata.filename);
         if (!file.exists()) {
             return false;
         }
         try {
-            ShoppingList newList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
-            metadata.shoppingList.clear();
-            metadata.shoppingList.addAll(newList);
+            boolean hadListener = metadata.updateListener != null;
+            if (hadListener) {
+                metadata.shoppingList.removeListener(metadata.updateListener);
+            }
+            try {
+                ShoppingList latestList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
+                Set<Integer> fileIds = new HashSet<>();
+                for (int i = 0; i < latestList.size(); i++) {
+                    fileIds.add(latestList.getId(i));
+                }
+
+                metadata.shoppingList.clear();
+
+                for (int i = 0; i < latestList.size(); i++) {
+                    ListItem item = latestList.get(i);
+                    metadata.shoppingList.add(item);
+                }
+
+                metadata.isDirty = false;
+            } finally {
+                if (hadListener) {
+                    metadata.shoppingList.addListener(metadata.updateListener);
+                }
+            }
             return true;
         } catch (IOException | UnmarshallException e) {
             Log.e(TAG, "Failed to reload list from file", e);

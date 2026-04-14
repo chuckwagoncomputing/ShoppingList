@@ -34,6 +34,7 @@ import java.io.OutputStream;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -211,6 +212,8 @@ class ShoppingListsManager {
             metadata.shoppingList.removeListener(metadata.updateListener);
         }
 
+        Comparator<ListItem> savedComparator = metadata.sortComparator;
+
         Map<Integer, Boolean> localCheckedChanges = new HashMap<>(metadata.locallyModifiedChecked);
         Map<Integer, String> localDescChanges = new HashMap<>(metadata.locallyModifiedDescriptions);
         Map<Integer, String> localQtyChanges = new HashMap<>(metadata.locallyModifiedQuantities);
@@ -276,6 +279,10 @@ class ShoppingListsManager {
                             }
                         }
                     }
+                }
+
+                if (savedComparator != null) {
+                    metadata.shoppingList.sort(savedComparator);
                 }
             }
             metadata.locallyModifiedChecked.clear();
@@ -454,6 +461,10 @@ class ShoppingListsManager {
                     metadata.shoppingList.add(item);
                 }
 
+                if (metadata.sortComparator != null) {
+                    metadata.shoppingList.sort(metadata.sortComparator);
+                }
+
                 metadata.isDirty = false;
             } finally {
                 if (hadListener) {
@@ -464,6 +475,13 @@ class ShoppingListsManager {
         } catch (IOException | UnmarshallException e) {
             Log.e(TAG, "Failed to reload list from file", e);
             return false;
+        }
+    }
+
+    void setListSortComparator(String name, Comparator<ListItem> comparator) {
+        ShoppingListMetadata metadata = shoppingListsMetadata.getByName(name);
+        if (metadata != null) {
+            metadata.setSortComparator(comparator);
         }
     }
 
@@ -491,12 +509,17 @@ class ShoppingListsManager {
         private Set<Integer> locallyDeletedIds = new HashSet<>();
         private Set<Integer> locallyNewIds = new HashSet<>();
         private Set<String> locallyDeletedDescriptions = new HashSet<>();
+        private Comparator<ListItem> sortComparator;
 
         private ShoppingListMetadata(ShoppingList shoppingList, String filename) {
             this.shoppingList = shoppingList;
             this.filename = filename;
             this.isDirty = false;
             this.isSyncing = false;
+        }
+
+        private void setSortComparator(Comparator<ListItem> comparator) {
+            this.sortComparator = comparator;
         }
     }
 

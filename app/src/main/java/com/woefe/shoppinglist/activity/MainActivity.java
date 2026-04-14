@@ -303,6 +303,7 @@ public class MainActivity extends BinderActivity implements
         } else if (itemId == R.id.action_sort_manual) {
             if (currentListName != null) {
                 getBinder().reloadList(currentListName);
+                getBinder().setListSortComparator(currentListName, null);
             }
             saveSortOrder(SortType.MANUAL);
             return true;
@@ -327,13 +328,15 @@ public class MainActivity extends BinderActivity implements
         if (list == null) {
             return;
         }
-        list.sort(new Comparator<ListItem>() {
+        Comparator<ListItem> comparator = new Comparator<ListItem>() {
             @Override
             public int compare(ListItem o1, ListItem o2) {
                 int i = o1.getDescription().compareToIgnoreCase(o2.getDescription());
                 return i * (ascending ? 1 : -1);
             }
-        });
+        };
+        list.sort(comparator);
+        getBinder().setListSortComparator(currentListName, comparator);
         saveSortOrder(ascending ? SortType.A_TO_Z : SortType.Z_TO_A);
     }
 
@@ -342,7 +345,7 @@ public class MainActivity extends BinderActivity implements
         if (list == null) {
             return;
         }
-        list.sort(new Comparator<ListItem>() {
+        Comparator<ListItem> comparator = new Comparator<ListItem>() {
             @Override
             public int compare(ListItem o1, ListItem o2) {
                 if (o1.isChecked() && !o2.isChecked()) {
@@ -353,7 +356,9 @@ public class MainActivity extends BinderActivity implements
                 }
                 return o1.getDescription().compareToIgnoreCase(o2.getDescription());
             }
-        });
+        };
+        list.sort(comparator);
+        getBinder().setListSortComparator(currentListName, comparator);
         saveSortOrder(checkedFirst ? SortType.CHECKED_DESC : SortType.CHECKED_ASC);
     }
 
@@ -376,25 +381,26 @@ public class MainActivity extends BinderActivity implements
         if (list == null || sortType == SortType.NONE) {
             return;
         }
+        Comparator<ListItem> comparator = null;
         switch (sortType) {
             case A_TO_Z:
-                list.sort(new Comparator<ListItem>() {
+                comparator = new Comparator<ListItem>() {
                     @Override
                     public int compare(ListItem o1, ListItem o2) {
                         return o1.getDescription().compareToIgnoreCase(o2.getDescription());
                     }
-                });
+                };
                 break;
             case Z_TO_A:
-                list.sort(new Comparator<ListItem>() {
+                comparator = new Comparator<ListItem>() {
                     @Override
                     public int compare(ListItem o1, ListItem o2) {
                         return o2.getDescription().compareToIgnoreCase(o1.getDescription());
                     }
-                });
+                };
                 break;
             case CHECKED_ASC:
-                list.sort(new Comparator<ListItem>() {
+                comparator = new Comparator<ListItem>() {
                     @Override
                     public int compare(ListItem o1, ListItem o2) {
                         if (o1.isChecked() && !o2.isChecked()) {
@@ -405,10 +411,10 @@ public class MainActivity extends BinderActivity implements
                         }
                         return o1.getDescription().compareToIgnoreCase(o2.getDescription());
                     }
-                });
+                };
                 break;
             case CHECKED_DESC:
-                list.sort(new Comparator<ListItem>() {
+                comparator = new Comparator<ListItem>() {
                     @Override
                     public int compare(ListItem o1, ListItem o2) {
                         if (o1.isChecked() && !o2.isChecked()) {
@@ -419,8 +425,14 @@ public class MainActivity extends BinderActivity implements
                         }
                         return o1.getDescription().compareToIgnoreCase(o2.getDescription());
                     }
-                });
+                };
                 break;
+        }
+        if (comparator != null) {
+            list.sort(comparator);
+            if (currentListName != null) {
+                getBinder().setListSortComparator(currentListName, comparator);
+            }
         }
     }
 
@@ -551,5 +563,12 @@ public class MainActivity extends BinderActivity implements
 		if (currentListName != null) {
 			getBinder().reloadList(currentListName);
 		}
+	}
+
+	public SortType getCurrentSortOrder() {
+		if (currentListName != null) {
+			return getSavedSortOrder(currentListName);
+		}
+		return SortType.NONE;
 	}
 }

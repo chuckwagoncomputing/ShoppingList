@@ -23,11 +23,18 @@ import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
+import android.provider.Settings;
 import android.view.View;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentActivity;
 import androidx.preference.EditTextPreference;
 import androidx.preference.Preference;
@@ -48,6 +55,7 @@ public class SettingsFragment extends PreferenceFragmentCompat implements
     public static final String KEY_DIRECTORY_LOCATION = "FILE_LOCATION";
     public static final String KEY_THEME = "THEME";
     private static final int REQUEST_CODE_CHOOSE_DIR = 123;
+    private static final int REQUEST_CODE_MANAGE_STORAGE = 124;
 
     private SettingsRepository settingsRepository;
 
@@ -64,10 +72,15 @@ public class SettingsFragment extends PreferenceFragmentCompat implements
         addPreferencesFromResource(R.xml.preferences);
         getSharedPreferences().registerOnSharedPreferenceChangeListener(this);
 
-        // show the current value in the settings screen
         for (int i = 0; i < getPreferenceScreen().getPreferenceCount(); i++) {
             initSummary(getPreferenceScreen().getPreference(i));
         }
+        
+        Preference permissionsPref = findPreference("PERMISSIONS");
+        if (permissionsPref != null) {
+            updatePermissionsSummary(permissionsPref);
+        }
+        
         View content = getActivity().findViewById(android.R.id.content);
         content.setBackgroundColor(getResources().getColor(R.color.colorBackground));
     }
@@ -91,6 +104,26 @@ public class SettingsFragment extends PreferenceFragmentCompat implements
                 return true;
             }
         });
+
+        final Preference permissionsPref = findPreference("PERMISSIONS");
+        if (permissionsPref != null) {
+            updatePermissionsSummary(permissionsPref);
+            permissionsPref.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+                @Override
+                public boolean onPreferenceClick(Preference preference) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                        intent.setData(Uri.parse("package:" + requireContext().getPackageName()));
+                        startActivityForResult(intent, REQUEST_CODE_MANAGE_STORAGE);
+                    } else {
+                        ActivityCompat.requestPermissions(getActivity(),
+                                new String[]{android.Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                                REQUEST_CODE_MANAGE_STORAGE);
+                    }
+                    return true;
+                }
+            });
+        }
     }
 
     @Override
@@ -115,9 +148,26 @@ public class SettingsFragment extends PreferenceFragmentCompat implements
             String path = getSharedPreferences().getString(KEY_DIRECTORY_LOCATION, "");
             p.setSummary(path);
         }
+        if ("PERMISSIONS".equals(p.getKey())) {
+            updatePermissionsSummary(p);
+        }
         if (p instanceof EditTextPreference) {
             EditTextPreference editTextPref = (EditTextPreference) p;
             p.setSummary(editTextPref.getText());
+        }
+    }
+
+    private void updatePermissionsSummary(Preference p) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            boolean hasPermission = Environment.isExternalStorageManager();
+            p.setSummary(hasPermission ? "Granted" : "Not granted - tap to request");
+        } else {
+            Context context = getContext();
+            if (context != null) {
+                boolean hasPermission = ContextCompat.checkSelfPermission(context,
+                        android.Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED;
+                p.setSummary(hasPermission ? "Granted" : "Not granted");
+            }
         }
     }
 
@@ -151,6 +201,13 @@ public class SettingsFragment extends PreferenceFragmentCompat implements
                     String path = data.getStringExtra(DirectoryChooser.SELECTED_PATH);
                     SharedPreferences.Editor editor = getSharedPreferences().edit();
                     editor.putString(KEY_DIRECTORY_LOCATION, path).apply();
+                }
+                break;
+            }
+            case (REQUEST_CODE_MANAGE_STORAGE): {
+                Preference p = findPreference("PERMISSIONS");
+                if (p != null) {
+                    updatePermissionsSummary(p);
                 }
                 break;
             }

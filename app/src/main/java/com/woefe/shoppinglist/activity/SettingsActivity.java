@@ -47,6 +47,8 @@ public class SettingsActivity extends AppCompatActivity {
 		setContentView(R.layout.activity_settings);
 
 		getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
+
+		getWindow().setStatusBarColor(android.graphics.Color.TRANSPARENT);
 		getWindow().setNavigationBarColor(android.graphics.Color.TRANSPARENT);
 		getWindow().getDecorView().setSystemUiVisibility(
 			View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);

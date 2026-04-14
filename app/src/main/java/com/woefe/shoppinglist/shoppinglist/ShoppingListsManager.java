@@ -74,12 +74,16 @@ class ShoppingListsManager {
                 if (path == null) {
                     return;
                 }
+                if (!path.endsWith(FILE_ENDING)) {
+                    return;
+                }
                 File file = new File(directory, path);
                 switch (event) {
                     case FileObserver.DELETE:
                         shoppingListsMetadata.removeByFile(file.getPath());
                         break;
                     case FileObserver.CREATE:
+                    case FileObserver.MODIFY:
                         // workaround: When CREATE is triggered, the file might still be empty.
                         SystemClock.sleep(100);
                         loadFromFile(file);
@@ -119,8 +123,12 @@ class ShoppingListsManager {
     private void maybeAddInitialList() {
         boolean foundFile = false;
 
-        for (File file : new File(directory).listFiles()) {
-            foundFile = foundFile || file.isFile();
+        File dir = new File(directory);
+        File[] files = dir.listFiles((dir1, name) -> name.endsWith(FILE_ENDING));
+        if (files != null) {
+            for (File file : files) {
+                foundFile = foundFile || file.isFile();
+            }
         }
 
         if (!foundFile) {
@@ -144,9 +152,12 @@ class ShoppingListsManager {
 
     private void loadFromDirectory(String directory) {
         File d = new File(directory);
-        for (File file : d.listFiles()) {
-            if (file.isFile()) {
-                loadFromFile(file);
+        File[] files = d.listFiles((dir, name) -> name.endsWith(FILE_ENDING));
+        if (files != null) {
+            for (File file : files) {
+                if (file.isFile()) {
+                    loadFromFile(file);
+                }
             }
         }
     }

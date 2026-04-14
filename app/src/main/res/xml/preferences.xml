@@ -25,6 +25,11 @@
             android:inputType="text"
             android:title="@string/settings_file_location" />
 
+        <Preference
+            android:key="PERMISSIONS"
+            android:icon="@drawable/ic_sd_storage_24dp"
+            android:title="Permissions" />
+
         <ListPreference
             android:key="THEME"
             android:icon="@drawable/ic_color_lens_24dp"

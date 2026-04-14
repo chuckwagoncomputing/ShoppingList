@@ -48,6 +48,7 @@
     <string name="share">Share</string>
     <string name="warn_ignore_directory">Cannot access configured directory!</string>
     <string name="sort">Sort</string>
+    <string name="manual">Manual</string>
     <string name="ascending">A-Z</string>
     <string name="descending">Z-A</string>
     <string name="warn_no_dir_access">Cannot access selected directory!</string>

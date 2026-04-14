@@ -85,6 +85,7 @@ public class MainActivity extends BinderActivity implements
 
     private enum SortType {
         NONE,
+        MANUAL,
         A_TO_Z,
         Z_TO_A,
         CHECKED_ASC,
@@ -296,6 +297,12 @@ public class MainActivity extends BinderActivity implements
             return true;
         } else if (itemId == R.id.action_share) {
             doShare();
+            return true;
+        } else if (itemId == R.id.action_sort_manual) {
+            if (currentListName != null) {
+                getBinder().reloadList(currentListName);
+            }
+            saveSortOrder(SortType.MANUAL);
             return true;
         } else if (itemId == R.id.action_sort_a_to_z) {
             sort(true);

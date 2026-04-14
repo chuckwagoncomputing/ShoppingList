@@ -34,6 +34,9 @@
         android:title="@string/sort">
         <menu>
             <item
+                android:id="@+id/action_sort_manual"
+                android:title="@string/manual" />
+            <item
                 android:id="@+id/action_sort_a_to_z"
                 android:title="@string/ascending" />
             <item

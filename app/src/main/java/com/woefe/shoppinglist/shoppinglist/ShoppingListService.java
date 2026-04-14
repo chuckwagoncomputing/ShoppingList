@@ -126,6 +126,14 @@ public class ShoppingListService extends Service implements SharedPreferences.On
             return manager.size();
         }
 
+        public String getListFilename(String listName) {
+            return manager.getListFilename(listName);
+        }
+
+        public boolean reloadList(String listName) {
+            return manager.reloadList(listName);
+        }
+
         public void addListChangeListener(ListsChangeListener listener) {
             manager.setListChangeListener(listener);
         }

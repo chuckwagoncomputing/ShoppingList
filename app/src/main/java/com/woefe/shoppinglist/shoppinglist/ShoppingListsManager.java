@@ -414,6 +414,34 @@ class ShoppingListsManager {
         return shoppingListsMetadata.hasName(name);
     }
 
+    String getListFilename(String name) {
+        ShoppingListMetadata metadata = shoppingListsMetadata.getByName(name);
+        if (metadata != null) {
+            return metadata.filename;
+        }
+        return null;
+    }
+
+    boolean reloadList(String name) {
+        ShoppingListMetadata metadata = shoppingListsMetadata.getByName(name);
+        if (metadata == null) {
+            return false;
+        }
+        File file = new File(metadata.filename);
+        if (!file.exists()) {
+            return false;
+        }
+        try {
+            ShoppingList newList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
+            metadata.shoppingList.clear();
+            metadata.shoppingList.addAll(newList);
+            return true;
+        } catch (IOException | UnmarshallException e) {
+            Log.e(TAG, "Failed to reload list from file", e);
+            return false;
+        }
+    }
+
     void rename(String oldName, String newName) {
         if (!oldName.equals(newName)) {
             ShoppingListMetadata metadata = shoppingListsMetadata.removeByName(oldName);

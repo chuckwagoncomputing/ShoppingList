@@ -58,6 +58,10 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
         connectList();
     }
 
+    public ShoppingList getShoppingList() {
+        return shoppingList;
+    }
+
     @Override
     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, Bundle savedInstanceState) {
         rootView = inflater.inflate(R.layout.fragment_shoppinglist, container, false);

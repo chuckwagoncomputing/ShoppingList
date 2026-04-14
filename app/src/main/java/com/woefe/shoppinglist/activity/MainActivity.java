@@ -37,6 +37,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
+import android.content.SharedPreferences;
 import android.widget.ArrayAdapter;
 import android.widget.LinearLayout;
 import android.widget.ListView;
@@ -80,6 +81,15 @@ public class MainActivity extends BinderActivity implements
 
     private static final String KEY_FRAGMENT = "FRAGMENT";
     private static final String KEY_LIST_NAME = "LIST_NAME";
+    private static final String KEY_SORT_ORDER_PREFIX = "SORT_ORDER_";
+
+    private enum SortType {
+        NONE,
+        A_TO_Z,
+        Z_TO_A,
+        CHECKED_ASC,
+        CHECKED_DESC
+    }
     private DrawerLayout drawerLayout;
     private ListView drawerList;
     private LinearLayout drawerContainer;
@@ -89,6 +99,7 @@ public class MainActivity extends BinderActivity implements
     private String currentListName;
     private ShareActionProvider actionProvider;
     private int lastTheme;
+    private SharedPreferences prefs;
 
     @RequiresApi(api = Build.VERSION_CODES.M)
     @Override
@@ -139,6 +150,7 @@ public class MainActivity extends BinderActivity implements
             }
         });
         lastTheme = AppCompatDelegate.getDefaultNightMode();
+        prefs = getSharedPreferences("shopping_list_prefs", MODE_PRIVATE);
         
         toolbar.setNavigationIcon(R.drawable.ic_menu_24dp);
         setSupportActionBar(toolbar);
@@ -313,6 +325,7 @@ public class MainActivity extends BinderActivity implements
                 return i * (ascending ? 1 : -1);
             }
         });
+        saveSortOrder(ascending ? SortType.A_TO_Z : SortType.Z_TO_A);
     }
 
     private void sortByChecked(final boolean checkedFirst) {
@@ -332,7 +345,74 @@ public class MainActivity extends BinderActivity implements
                 return o1.getDescription().compareToIgnoreCase(o2.getDescription());
             }
         });
+        saveSortOrder(checkedFirst ? SortType.CHECKED_DESC : SortType.CHECKED_ASC);
+    }
 
+    private void saveSortOrder(SortType sortType) {
+        if (currentListName != null) {
+            prefs.edit().putString(KEY_SORT_ORDER_PREFIX + currentListName, sortType.name()).apply();
+        }
+    }
+
+    private SortType getSavedSortOrder(String listName) {
+        String name = prefs.getString(KEY_SORT_ORDER_PREFIX + listName, SortType.NONE.name());
+        try {
+            return SortType.valueOf(name);
+        } catch (IllegalArgumentException e) {
+            return SortType.NONE;
+        }
+    }
+
+    private void applySortOrder(ShoppingList list, SortType sortType) {
+        if (list == null || sortType == SortType.NONE) {
+            return;
+        }
+        switch (sortType) {
+            case A_TO_Z:
+                list.sort(new Comparator<ListItem>() {
+                    @Override
+                    public int compare(ListItem o1, ListItem o2) {
+                        return o1.getDescription().compareToIgnoreCase(o2.getDescription());
+                    }
+                });
+                break;
+            case Z_TO_A:
+                list.sort(new Comparator<ListItem>() {
+                    @Override
+                    public int compare(ListItem o1, ListItem o2) {
+                        return o2.getDescription().compareToIgnoreCase(o1.getDescription());
+                    }
+                });
+                break;
+            case CHECKED_ASC:
+                list.sort(new Comparator<ListItem>() {
+                    @Override
+                    public int compare(ListItem o1, ListItem o2) {
+                        if (o1.isChecked() && !o2.isChecked()) {
+                            return -1;
+                        }
+                        if (!o1.isChecked() && o2.isChecked()) {
+                            return 1;
+                        }
+                        return o1.getDescription().compareToIgnoreCase(o2.getDescription());
+                    }
+                });
+                break;
+            case CHECKED_DESC:
+                list.sort(new Comparator<ListItem>() {
+                    @Override
+                    public int compare(ListItem o1, ListItem o2) {
+                        if (o1.isChecked() && !o2.isChecked()) {
+                            return 1;
+                        }
+                        if (!o1.isChecked() && o2.isChecked()) {
+                            return -1;
+                        }
+                        return o1.getDescription().compareToIgnoreCase(o2.getDescription());
+                    }
+                });
+                break;
+        }
     }
 
     @Override
@@ -385,6 +465,12 @@ public class MainActivity extends BinderActivity implements
         this.currentFragment = fragment;
         setTitle(name);
         updateDrawer();
+        if (fragment instanceof ShoppingListFragment) {
+            ShoppingList list = ((ShoppingListFragment) fragment).getShoppingList();
+            if (list != null) {
+                applySortOrder(list, getSavedSortOrder(name));
+            }
+        }
         FragmentManager manager = getSupportFragmentManager();
         manager.beginTransaction().replace(R.id.content_frame, fragment).commit();
     }

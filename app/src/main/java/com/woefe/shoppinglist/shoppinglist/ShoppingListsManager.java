@@ -172,6 +172,14 @@ class ShoppingListsManager {
                         metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
                         metadata.locallyDeletedIds.remove(id);
                     }
+                } else if (eventState == ShoppingList.Event.ITEM_MOVED) {
+                    metadata.isDirty = true;
+                    try {
+                        writeToFile(metadata);
+                    } catch (IOException ex) {
+                        Log.e(TAG, "Failed to write on move", ex);
+                    }
+                    return;
                 } else if (eventState == ShoppingList.Event.ITEM_INSERTED) {
                     int index = e.getIndex();
                     if (index >= 0 && index < list.size()) {

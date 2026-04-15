@@ -46,6 +46,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
                 case ShoppingList.Event.ITEM_MOVED:
                     if (e.getOldIndex() >= 0 && e.getNewIndex() >= 0 && e.getOldIndex() != e.getNewIndex()) {
                         notifyItemMoved(e.getOldIndex(), e.getNewIndex());
+                        notifyDataSetChanged();
                     }
                     break;
                 case ShoppingList.Event.ITEM_REMOVED:
@@ -58,6 +59,8 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     };
     
     private boolean isDragging = false;
+    private int dragStartPosition = -1;
+    private int lastDropPosition = -1;
 
     public RecyclerListAdapter(Context ctx) {
         colorChecked = ContextCompat.getColor(ctx, R.color.textColorChecked);
@@ -208,9 +211,11 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
         public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
             if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
                 isDragging = true;
+                dragStartPosition = viewHolder.getAdapterPosition();
                 viewHolder.itemView.setAlpha(0.8f);
                 viewHolder.itemView.setScaleX(1.05f);
                 viewHolder.itemView.setScaleY(1.05f);
+                viewHolder.itemView.setElevation(10f);
                 if (dragListener != null) {
                     dragListener.onDragStart();
                 }
@@ -220,9 +225,21 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
         @Override
         public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
             isDragging = false;
+            if (dragStartPosition >= 0 && lastDropPosition >= 0 && dragStartPosition != lastDropPosition) {
+                shoppingList.move(dragStartPosition, lastDropPosition);
+            } else if (lastDropPosition >= 0 && dragStartPosition < 0) {
+                int fromPos = lastDropPosition;
+                int toPos = viewHolder.getAdapterPosition();
+                if (fromPos != toPos && toPos >= 0) {
+                    shoppingList.move(fromPos, toPos);
+                }
+            }
+            dragStartPosition = -1;
+            lastDropPosition = -1;
             viewHolder.itemView.setAlpha(1.0f);
             viewHolder.itemView.setScaleX(1.0f);
             viewHolder.itemView.setScaleY(1.0f);
+            viewHolder.itemView.setElevation(0f);
             if (dragListener != null) {
                 dragListener.onDragEnd();
             }
@@ -254,11 +271,16 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             int fromPos = viewHolder.getAdapterPosition();
             int toPos = target.getAdapterPosition();
 
-            if (fromPos < 0 || toPos < 0 || fromPos == toPos) {
-                return fromPos >= 0 && toPos >= 0;
+            if (fromPos < 0 || toPos < 0) {
+                return false;
             }
 
-            shoppingList.move(fromPos, toPos);
+            if (fromPos == toPos) {
+                return true;
+            }
+
+            lastDropPosition = toPos;
+            notifyItemMoved(fromPos, toPos);
             return true;
         }
 

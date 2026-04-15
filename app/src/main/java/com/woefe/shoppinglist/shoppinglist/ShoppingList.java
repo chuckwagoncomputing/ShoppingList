@@ -67,9 +67,6 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     public void setSuppressNotifications(boolean suppress) {
         this.suppressNotifications = suppress;
-        if (!suppress) {
-            notifyListChanged(Event.newOther());
-        }
     }
 
     public int getId(int index) {

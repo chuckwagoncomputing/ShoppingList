@@ -366,12 +366,79 @@ class ShoppingListsManager {
         }
     }
 
-    private void writeToFile(ShoppingListMetadata metadata) throws IOException {
+    private void writeToFile(ShoppingListMetadata metadata) throws IOException, UnmarshallException {
         metadata.isSyncing = true;
-        try (OutputStream os = new FileOutputStream(metadata.filename)) {
-            ShoppingListMarshaller.marshall(os, metadata.shoppingList);
-            metadata.isDirty = false;
-            Log.d(TAG, "writeToFile: wrote " + metadata.shoppingList.size() + " items");
+        try {
+            File file = new File(metadata.filename);
+            if (file.exists()) {
+                ShoppingList latestList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
+                Set<Integer> fileIds = new HashSet<>();
+                for (int i = 0; i < latestList.size(); i++) {
+                    fileIds.add(latestList.getId(i));
+                }
+
+                metadata.shoppingList.clear();
+
+                Map<String, Boolean> localCheckedByDesc = new HashMap<>();
+                for (Map.Entry<Integer, Boolean> entry : metadata.locallyModifiedChecked.entrySet()) {
+                    int id = entry.getKey();
+                    Boolean checked = entry.getValue();
+                    for (ListItem item : metadata.shoppingList) {
+                        if (((ListItem.ListItemWithID) item).getId() == id) {
+                            localCheckedByDesc.put(item.getDescription().toLowerCase(), checked);
+                            break;
+                        }
+                    }
+                }
+
+                for (int i = 0; i < latestList.size(); i++) {
+                    ListItem item = latestList.get(i);
+                    int fileItemId = latestList.getId(i);
+                    String descLower = item.getDescription().toLowerCase();
+                    if (metadata.locallyDeletedIds.contains(fileItemId) || metadata.locallyDeletedDescriptions.contains(descLower)) {
+                        continue;
+                    }
+                    if (localCheckedByDesc.containsKey(descLower)) {
+                        item.setChecked(localCheckedByDesc.get(descLower));
+                    }
+                    if (metadata.locallyModifiedIndices.contains(i)) {
+                        item.setDescription(metadata.locallyModifiedNewDescriptions.get(i));
+                        item.setQuantity(metadata.locallyModifiedNewQuantities.get(i));
+                    }
+                    metadata.shoppingList.add(item);
+                }
+
+                for (Integer newId : metadata.locallyNewIds) {
+                    if (!fileIds.contains(newId)) {
+                        for (ListItem item : metadata.shoppingList) {
+                            if (((ListItem.ListItemWithID) item).getId() == newId) {
+                                metadata.shoppingList.add(item);
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (metadata.sortComparator != null) {
+                    metadata.shoppingList.sort(metadata.sortComparator);
+                }
+
+                metadata.locallyModifiedChecked.clear();
+                metadata.locallyModifiedDescriptions.clear();
+                metadata.locallyModifiedQuantities.clear();
+                metadata.locallyModifiedIndices.clear();
+                metadata.locallyModifiedNewDescriptions.clear();
+                metadata.locallyModifiedNewQuantities.clear();
+                metadata.locallyDeletedIds.clear();
+                metadata.locallyNewIds.clear();
+                metadata.locallyDeletedDescriptions.clear();
+            }
+
+            try (OutputStream os = new FileOutputStream(metadata.filename)) {
+                ShoppingListMarshaller.marshall(os, metadata.shoppingList);
+                metadata.isDirty = false;
+                Log.d(TAG, "writeToFile: wrote " + metadata.shoppingList.size() + " items");
+            }
         } finally {
             metadata.isSyncing = false;
         }
@@ -445,7 +512,7 @@ class ShoppingListsManager {
         metadata.isDirty = true;
         try {
             writeToFile(metadata);
-        } catch (IOException e) {
+        } catch (IOException | UnmarshallException e) {
             Log.e(TAG, "Failed to write new list", e);
         }
     }
@@ -453,7 +520,8 @@ class ShoppingListsManager {
     boolean removeList(String name) {
         if (hasList(name)) {
             ShoppingListMetadata toRemove = shoppingListsMetadata.removeByName(name);
-            trashcan.put(toRemove.shoppingList.getName(), toRemove);
+            new File(toRemove.filename).delete();
+            Log.d(TAG, "removeList: deleted file " + toRemove.filename);
             return true;
         }
         return false;
@@ -496,7 +564,7 @@ class ShoppingListsManager {
         if (metadata.isDirty) {
             try {
                 writeToFile(metadata);
-            } catch (IOException e) {
+            } catch (IOException | UnmarshallException e) {
                 Log.e(TAG, "reloadList: failed to write", e);
             }
             metadata.isDirty = false;

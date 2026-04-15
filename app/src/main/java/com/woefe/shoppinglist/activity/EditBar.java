@@ -96,7 +96,7 @@ public class EditBar implements ShoppingList.ShoppingListListener {
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 String str = s.toString();
-                if (str.equals("")) {
+                if (str.equals("") || (mode == Mode.ADD && descriptionIndex.contains(str.toLowerCase()))) {
                     setButtonEnabled(button, false);
                 } else {
                     setButtonEnabled(button, true);

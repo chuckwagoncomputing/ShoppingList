@@ -4,7 +4,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -31,6 +30,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     private ShoppingList shoppingList;
     private ItemTouchHelper touchHelper;
     private ItemLongClickListener longClickListener;
+    private DragListener dragListener;
     private MainActivity mainActivity;
 
     private final ShoppingList.ShoppingListListener listener = new ShoppingList.ShoppingListListener() {
@@ -44,10 +44,11 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
                     notifyItemInserted(e.getIndex());
                     break;
                 case ShoppingList.Event.ITEM_MOVED:
-                    notifyItemMoved(e.getOldIndex(), e.getNewIndex());
+                    if (e.getOldIndex() >= 0 && e.getNewIndex() >= 0 && e.getOldIndex() != e.getNewIndex()) {
+                        notifyItemMoved(e.getOldIndex(), e.getNewIndex());
+                    }
                     break;
                 case ShoppingList.Event.ITEM_REMOVED:
-                    Log.d("RecyclerListAdapter", "ITEM_REMOVED at index " + e.getIndex() + ", list size " + shoppingList.size());
                     notifyItemRemoved(e.getIndex());
                     break;
                 default:
@@ -55,6 +56,8 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             }
         }
     };
+    
+    private boolean isDragging = false;
 
     public RecyclerListAdapter(Context ctx) {
         colorChecked = ContextCompat.getColor(ctx, R.color.textColorChecked);
@@ -166,6 +169,15 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
         boolean onLongClick(int position);
     }
 
+    public interface DragListener {
+        void onDragStart();
+        void onDragEnd();
+    }
+
+    public void setDragListener(DragListener listener) {
+        this.dragListener = listener;
+    }
+
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView description;
         TextView quantity;
@@ -194,13 +206,27 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
         @Override
         public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
-            super.onSelectedChanged(viewHolder, actionState);
+            if (actionState == ItemTouchHelper.ACTION_STATE_DRAG && viewHolder != null) {
+                isDragging = true;
+                viewHolder.itemView.setAlpha(0.8f);
+                viewHolder.itemView.setScaleX(1.05f);
+                viewHolder.itemView.setScaleY(1.05f);
+                if (dragListener != null) {
+                    dragListener.onDragStart();
+                }
+            }
         }
 
-@Override
-    public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
-        super.clearView(recyclerView, viewHolder);
-    }
+        @Override
+        public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
+            isDragging = false;
+            viewHolder.itemView.setAlpha(1.0f);
+            viewHolder.itemView.setScaleX(1.0f);
+            viewHolder.itemView.setScaleY(1.0f);
+            if (dragListener != null) {
+                dragListener.onDragEnd();
+            }
+        }
 
         @Override
         public boolean isItemViewSwipeEnabled() {
@@ -225,7 +251,14 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
                 return false;
             }
 
-            RecyclerListAdapter.this.move(viewHolder.getAdapterPosition(), target.getAdapterPosition());
+            int fromPos = viewHolder.getAdapterPosition();
+            int toPos = target.getAdapterPosition();
+
+            if (fromPos < 0 || toPos < 0 || fromPos == toPos) {
+                return fromPos >= 0 && toPos >= 0;
+            }
+
+            shoppingList.move(fromPos, toPos);
             return true;
         }
 
@@ -236,7 +269,6 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
         @Override
         public void onChildDraw(Canvas c, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-
             if (actionState != ItemTouchHelper.ACTION_STATE_SWIPE) {
                 super.onChildDraw(c, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
                 return;

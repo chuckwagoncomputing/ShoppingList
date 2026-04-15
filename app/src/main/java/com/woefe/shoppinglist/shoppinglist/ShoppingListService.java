@@ -145,5 +145,9 @@ public class ShoppingListService extends Service implements SharedPreferences.On
         public void removeListChangeListener(ListsChangeListener listener) {
             manager.removeListChangeListenerListener(listener);
         }
+
+        public void setDragging(String listName, boolean dragging) {
+            manager.setDragging(listName, dragging);
+        }
     }
 }

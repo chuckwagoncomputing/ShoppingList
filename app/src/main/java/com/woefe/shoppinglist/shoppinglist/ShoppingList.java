@@ -44,6 +44,7 @@ public class ShoppingList extends ArrayList<ListItem> {
     private String name;
     private static int currentID;
     private final List<ShoppingListListener> listeners = new LinkedList<>();
+    private boolean suppressNotifications = false;
 
     public ShoppingList(String name) {
         super();
@@ -62,6 +63,13 @@ public class ShoppingList extends ArrayList<ListItem> {
     public void setName(String name) {
         this.name = name;
         notifyListChanged(Event.newOther());
+    }
+
+    public void setSuppressNotifications(boolean suppress) {
+        this.suppressNotifications = suppress;
+        if (!suppress) {
+            notifyListChanged(Event.newOther());
+        }
     }
 
     public int getId(int index) {
@@ -200,11 +208,12 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     @Override
     public void sort(Comparator<? super ListItem> c) {
-        ListItem[] items = toArray(new ListItem[size()]);
+        ShoppingList copy = new ShoppingList(this.name, this);
+        ListItem[] items = copy.toArray(new ListItem[copy.size()]);
         Arrays.sort(items, c);
+        notifyListChanged(Event.newOther());
         super.clear();
         super.addAll(Arrays.asList(items));
-        notifyListChanged(Event.newOther());
     }
 
     public void setChecked(int index, boolean isChecked) {
@@ -240,7 +249,8 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     public Set<String> createDescriptionIndex() {
         Set<String> descriptionIndex = new HashSet<>();
-        for (ListItem listItem : this) {
+        List<ListItem> snapshot = new ArrayList<>(this);
+        for (ListItem listItem : snapshot) {
             descriptionIndex.add(listItem.getDescription().toLowerCase());
         }
         return descriptionIndex;
@@ -259,6 +269,9 @@ public class ShoppingList extends ArrayList<ListItem> {
     }
 
     private void notifyListChanged(ShoppingList.Event event) {
+        if (suppressNotifications) {
+            return;
+        }
         for (ShoppingListListener listener : new LinkedList<>(listeners)) {
             new Handler(Looper.getMainLooper()).post(() -> {
                     listener.onShoppingListUpdate(this, event);

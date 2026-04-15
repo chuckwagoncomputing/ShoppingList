@@ -38,7 +38,7 @@ import com.woefe.shoppinglist.R;
 import com.woefe.shoppinglist.shoppinglist.ListItem;
 import com.woefe.shoppinglist.shoppinglist.ShoppingList;
 
-public class ShoppingListFragment extends Fragment implements EditBar.EditBarListener {
+public class ShoppingListFragment extends Fragment implements EditBar.EditBarListener, RecyclerListAdapter.DragListener {
 
     private EditBar editBar;
     private RecyclerView recyclerView;
@@ -132,6 +132,8 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
         adapter = new RecyclerListAdapter(getActivity());
         connectList();
         adapter.registerRecyclerView(recyclerView);
+        recyclerView.setItemAnimator(null);
+        adapter.setDragListener(this);
         adapter.setOnItemLongClickListener(new RecyclerListAdapter.ItemLongClickListener() {
             @Override
             public boolean onLongClick(int position) {
@@ -141,6 +143,22 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
             }
         });
         recyclerView.setAdapter(adapter);
+    }
+
+    @Override
+    public void onDragStart() {
+        MainActivity activity = (MainActivity) getActivity();
+        if (activity != null && activity.isServiceConnected()) {
+            activity.getBinder().setDragging(shoppingList.getName(), true);
+        }
+    }
+
+    @Override
+    public void onDragEnd() {
+        MainActivity activity = (MainActivity) getActivity();
+        if (activity != null && activity.isServiceConnected()) {
+            activity.getBinder().setDragging(shoppingList.getName(), false);
+        }
     }
 
     public boolean onBackPressed() {

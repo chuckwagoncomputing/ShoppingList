@@ -257,6 +257,13 @@ class ShoppingListsManager {
                     } catch (IOException | UnmarshallException ex) {
                         Log.e(TAG, "Failed to writeOnly on move", ex);
                     }
+                } else if (eventState == ShoppingList.Event.ITEM_INSERTED) {
+                    metadata.isDirty = true;
+                    int newIndex = e.getIndex();
+                    if (newIndex >= 0 && newIndex < list.size()) {
+                        int newId = list.getId(newIndex);
+                        metadata.locallyNewIds.add(newId);
+                    }
                 } else if (eventState == ShoppingList.Event.OTHER) {
                     return;
                 }

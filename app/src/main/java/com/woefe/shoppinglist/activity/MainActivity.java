@@ -309,62 +309,19 @@ public class MainActivity extends BinderActivity implements
             updateDragHandlerState();
             return true;
         } else if (itemId == R.id.action_sort_a_to_z) {
-            sort(true);
-            updateDragHandlerState();
+						applySortOrder(getBinder().getList(currentListName), SortType.A_TO_Z);
             return true;
         } else if (itemId == R.id.action_sort_z_to_a) {
-            sort(false);
-            updateDragHandlerState();
+						applySortOrder(getBinder().getList(currentListName), SortType.Z_TO_A);
             return true;
         } else if (itemId == R.id.action_sort_by_checked_asc) {
-            sortByChecked(false);
-            updateDragHandlerState();
+						applySortOrder(getBinder().getList(currentListName), SortType.CHECKED_ASC);
             return true;
         } else if (itemId == R.id.action_sort_by_checked_desc) {
-            sortByChecked(true);
-            updateDragHandlerState();
+						applySortOrder(getBinder().getList(currentListName), SortType.CHECKED_DESC);
             return true;
         }
         return super.onOptionsItemSelected(item);
-    }
-
-    private void sort(final boolean ascending) {
-        ShoppingList list = getBinder().getList(currentListName);
-        if (list == null) {
-            return;
-        }
-        Comparator<ListItem> comparator = new Comparator<ListItem>() {
-            @Override
-            public int compare(ListItem o1, ListItem o2) {
-                int i = o1.getDescription().compareToIgnoreCase(o2.getDescription());
-                return i * (ascending ? 1 : -1);
-            }
-        };
-        list.sort(comparator);
-        getBinder().setListSortComparator(currentListName, comparator);
-        saveSortOrder(ascending ? SortType.A_TO_Z : SortType.Z_TO_A);
-    }
-
-    private void sortByChecked(final boolean checkedFirst) {
-        ShoppingList list = getBinder().getList(currentListName);
-        if (list == null) {
-            return;
-        }
-        Comparator<ListItem> comparator = new Comparator<ListItem>() {
-            @Override
-            public int compare(ListItem o1, ListItem o2) {
-                if (o1.isChecked() && !o2.isChecked()) {
-                    return checkedFirst ? 1 : -1;
-                }
-                if (!o1.isChecked() && o2.isChecked()) {
-                    return checkedFirst ? -1 : 1;
-                }
-                return o1.getDescription().compareToIgnoreCase(o2.getDescription());
-            }
-        };
-        list.sort(comparator);
-        getBinder().setListSortComparator(currentListName, comparator);
-        saveSortOrder(checkedFirst ? SortType.CHECKED_DESC : SortType.CHECKED_ASC);
     }
 
     private void saveSortOrder(SortType sortType) {
@@ -382,10 +339,17 @@ public class MainActivity extends BinderActivity implements
         }
     }
 
+    public void applySavedSortOrder() {
+        if (currentListName != null && getBinder().hasList(currentListName)) {
+            applySortOrder(getBinder().getList(currentListName), getSavedSortOrder(currentListName));
+        }
+    }
+
     private void applySortOrder(ShoppingList list, SortType sortType) {
         if (list == null || sortType == SortType.NONE) {
             return;
         }
+        saveSortOrder(sortType);
         Comparator<ListItem> comparator = null;
         switch (sortType) {
             case A_TO_Z:
@@ -439,6 +403,7 @@ public class MainActivity extends BinderActivity implements
                 getBinder().setListSortComparator(currentListName, comparator);
             }
         }
+        updateDragHandlerState();
     }
 
     private void updateDragHandlerState() {
@@ -507,15 +472,8 @@ public class MainActivity extends BinderActivity implements
         this.currentFragment = fragment;
         setTitle(name);
         updateDrawer();
-        if (fragment instanceof ShoppingListFragment) {
-            ShoppingList list = ((ShoppingListFragment) fragment).getShoppingList();
-            if (list != null) {
-                applySortOrder(list, getSavedSortOrder(name));
-            }
-        }
         FragmentManager manager = getSupportFragmentManager();
         manager.beginTransaction().replace(R.id.content_frame, fragment).commit();
-        updateDragHandlerState();
     }
 
     private void selectList(int position) {
@@ -566,31 +524,31 @@ public class MainActivity extends BinderActivity implements
         }
     }
 
-	public Snackbar makeUndoSnackbar() {
-		View snackbarView;
-		if (currentFragment instanceof ShoppingListFragment && ((ShoppingListFragment) currentFragment).getEditBar().isVisible()) {
-			snackbarView = findViewById(R.id.shoppingListView);
-		} else {
-			snackbarView = findViewById(R.id.fab_add_parent);
-		}
-		return Snackbar.make(snackbarView, R.string.item_deleted, Snackbar.LENGTH_LONG);
-	}
-	
-	private boolean isLightMode() {
-		int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
-		return currentNightMode == Configuration.UI_MODE_NIGHT_NO;
-	}
+    public Snackbar makeUndoSnackbar() {
+        View snackbarView;
+        if (currentFragment instanceof ShoppingListFragment && ((ShoppingListFragment) currentFragment).getEditBar().isVisible()) {
+            snackbarView = findViewById(R.id.shoppingListView);
+        } else {
+            snackbarView = findViewById(R.id.fab_add_parent);
+        }
+        return Snackbar.make(snackbarView, R.string.item_deleted, Snackbar.LENGTH_LONG);
+    }
 
-	public void requestSync() {
-		if (currentListName != null) {
-			getBinder().reloadList(currentListName);
-		}
-	}
+    private boolean isLightMode() {
+        int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+        return currentNightMode == Configuration.UI_MODE_NIGHT_NO;
+    }
 
-	public SortType getCurrentSortOrder() {
-		if (currentListName != null) {
-			return getSavedSortOrder(currentListName);
-		}
-		return SortType.NONE;
-	}
+    public void requestSync() {
+        if (currentListName != null) {
+            getBinder().reloadList(currentListName);
+        }
+    }
+
+    public SortType getCurrentSortOrder() {
+        if (currentListName != null) {
+            return getSavedSortOrder(currentListName);
+        }
+        return SortType.NONE;
+    }
 }

@@ -142,6 +142,8 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
             }
         });
         recyclerView.setAdapter(adapter);
+        MainActivity activity = (MainActivity) getActivity();
+				activity.applySavedSortOrder();
     }
 
     @Override

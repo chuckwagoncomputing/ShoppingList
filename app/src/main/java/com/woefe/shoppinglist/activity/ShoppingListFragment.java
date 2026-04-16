@@ -194,4 +194,12 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
 	public EditBar getEditBar() {
 		return editBar;
 	}
+
+	public void setDragHandlerEnabled(boolean enabled) {
+		adapter.setDragHandlerEnabled(enabled);
+	}
+
+	public RecyclerListAdapter getRecyclerListAdapter() {
+		return adapter;
+	}
 }

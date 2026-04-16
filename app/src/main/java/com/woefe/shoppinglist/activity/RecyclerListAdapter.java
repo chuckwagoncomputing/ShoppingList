@@ -32,6 +32,8 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     private ItemLongClickListener longClickListener;
     private DragListener dragListener;
     private MainActivity mainActivity;
+    private boolean dragHandlerEnabled = true;
+    private RecyclerView recyclerView;
 
     private final ShoppingList.ShoppingListListener listener = new ShoppingList.ShoppingListListener() {
         @Override
@@ -101,6 +103,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     }
 
     public void registerRecyclerView(RecyclerView view) {
+        this.recyclerView = view;
         touchHelper.attachToRecyclerView(view);
     }
 
@@ -167,13 +170,15 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
         holder.dragHandler.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
-                if (event.getAction() == MotionEvent.ACTION_DOWN) {
+                if (dragHandlerEnabled && event.getAction() == MotionEvent.ACTION_DOWN) {
                     touchHelper.startDrag(holder);
                     return true;
                 }
                 return false;
             }
         });
+
+        holder.dragHandler.setVisibility(dragHandlerEnabled ? View.VISIBLE : View.INVISIBLE);
 
     }
 
@@ -196,6 +201,18 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
     public void setDragListener(DragListener listener) {
         this.dragListener = listener;
+    }
+
+    public void setDragHandlerEnabled(boolean enabled) {
+        this.dragHandlerEnabled = enabled;
+        if (shoppingList != null) {
+            for (int i = 0; i < shoppingList.size(); i++) {
+                ViewHolder holder = (ViewHolder) recyclerView.findViewHolderForAdapterPosition(i);
+                if (holder != null) {
+                    holder.dragHandler.setVisibility(enabled ? View.VISIBLE : View.INVISIBLE);
+                }
+            }
+        }
     }
 
     

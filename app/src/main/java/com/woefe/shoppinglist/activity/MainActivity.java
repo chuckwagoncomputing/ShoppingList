@@ -306,18 +306,23 @@ public class MainActivity extends BinderActivity implements
                 getBinder().setListSortComparator(currentListName, null);
             }
             saveSortOrder(SortType.MANUAL);
+            updateDragHandlerState();
             return true;
         } else if (itemId == R.id.action_sort_a_to_z) {
             sort(true);
+            updateDragHandlerState();
             return true;
         } else if (itemId == R.id.action_sort_z_to_a) {
             sort(false);
+            updateDragHandlerState();
             return true;
         } else if (itemId == R.id.action_sort_by_checked_asc) {
             sortByChecked(false);
+            updateDragHandlerState();
             return true;
         } else if (itemId == R.id.action_sort_by_checked_desc) {
             sortByChecked(true);
+            updateDragHandlerState();
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -436,6 +441,19 @@ public class MainActivity extends BinderActivity implements
         }
     }
 
+    private void updateDragHandlerState() {
+        if (currentFragment instanceof ShoppingListFragment) {
+            ShoppingListFragment fragment = (ShoppingListFragment) currentFragment;
+            if (fragment.getRecyclerListAdapter() == null) {
+                return;
+            }
+            SortType sortType = getCurrentSortOrder();
+            boolean enabled = (sortType == SortType.MANUAL || sortType == SortType.NONE);
+            fragment.setDragHandlerEnabled(enabled);
+            android.util.Log.d("MainActivity", "Drag handlers " + (enabled ? "enabled" : "disabled") + " for sort type " + sortType);
+        }
+    }
+
     @Override
     public void onPositiveButtonClicked(int action) {
         if (action == R.id.action_delete_checked) {
@@ -497,6 +515,7 @@ public class MainActivity extends BinderActivity implements
         }
         FragmentManager manager = getSupportFragmentManager();
         manager.beginTransaction().replace(R.id.content_frame, fragment).commit();
+        updateDragHandlerState();
     }
 
     private void selectList(int position) {

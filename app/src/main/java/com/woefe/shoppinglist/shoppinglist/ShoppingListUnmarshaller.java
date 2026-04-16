@@ -20,6 +20,7 @@
 package com.woefe.shoppinglist.shoppinglist;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,28 +30,15 @@ import java.util.regex.Pattern;
 
 public class ShoppingListUnmarshaller {
     private static final Pattern EMPTY_LINE = Pattern.compile("^\\s*$");
-    private static final Pattern HEADER = Pattern.compile("\\[(.*)]");
 
     public static ShoppingList unmarshal(String filename) throws IOException, UnmarshallException {
-        return unmarshal(new FileInputStream(filename));
+        String name = filename.substring(filename.lastIndexOf(File.separator)+1).replace("+", " ").replace(".lst", "");
+        return unmarshal(new FileInputStream(filename), name);
     }
 
-    public static ShoppingList unmarshal(InputStream inputStream) throws IOException, UnmarshallException {
+    public static ShoppingList unmarshal(InputStream inputStream, String name) throws IOException, UnmarshallException {
         ShoppingList shoppingList;
-        String name = null;
         BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
-        String firstLine = reader.readLine();
-
-        if (firstLine != null) {
-            Matcher matcher = HEADER.matcher(firstLine);
-            if (matcher.matches()) {
-                name = matcher.group(1).trim();
-            }
-        }
-
-        if (name == null) {
-            throw new UnmarshallException("Could not find the name of the list");
-        }
 
         shoppingList = new ShoppingList(name);
 

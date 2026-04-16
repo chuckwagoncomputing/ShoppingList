@@ -85,6 +85,25 @@ public class ShoppingList extends ArrayList<ListItem> {
         return add(new ListItem(false, description, quantity));
     }
 
+    public void addWithoutNewId(ListItem item) {
+        super.add(item);
+        notifyListChanged(Event.newItemInserted(size() - 1));
+    }
+
+    public void addAllWithoutNewId(Collection<? extends ListItem> c) {
+        super.addAll(c);
+        notifyListChanged(Event.newOther());
+    }
+
+    public void addItemPreservingId(ListItem item) {
+        if (item.getClass().getSimpleName().equals("ListItemWithID")) {
+            super.add(item);
+        } else {
+            add(item);
+        }
+        notifyListChanged(Event.newItemInserted(size() - 1));
+    }
+
     @Override
     public void add(int index, ListItem element) {
         super.add(index, element);
@@ -205,8 +224,7 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     @Override
     public void sort(Comparator<? super ListItem> c) {
-        ShoppingList copy = new ShoppingList(this.name, this);
-        ListItem[] items = copy.toArray(new ListItem[copy.size()]);
+        ListItem[] items = toArray(new ListItem[size()]);
         Arrays.sort(items, c);
         notifyListChanged(Event.newOther());
         super.clear();

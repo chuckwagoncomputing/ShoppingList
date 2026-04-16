@@ -38,5 +38,6 @@
     <color name="colorSecondaryLight">#FFC046</color>
     <color name="colorAccent">#FF8F00</color>
     <color name="colorCritical">#FF5722</color>
+    <color name="colorDivider">#E0E0E0</color>
     <color name="drawer_item_text_selected">#1B5E20</color>
 </resources>

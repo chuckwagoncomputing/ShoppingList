@@ -61,6 +61,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     private boolean isDragging = false;
     private int dragStartPosition = -1;
     private int lastDropPosition = -1;
+    private int currentDragTargetPosition = -1;
 
     public RecyclerListAdapter(Context ctx) {
         colorChecked = ContextCompat.getColor(ctx, R.color.textColorChecked);
@@ -105,6 +106,22 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
     public void setOnItemLongClickListener(ItemLongClickListener listener) {
         this.longClickListener = listener;
+    }
+
+    public int getDragStartPosition() {
+        return dragStartPosition;
+    }
+
+    public int getLastDropPosition() {
+        return lastDropPosition;
+    }
+
+    public void setCurrentDragPosition(int pos) {
+        currentDragTargetPosition = pos;
+    }
+
+    public int getCurrentDragPosition() {
+        return currentDragTargetPosition;
     }
 
     @NonNull
@@ -181,6 +198,8 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
         this.dragListener = listener;
     }
 
+    
+
     public static class ViewHolder extends RecyclerView.ViewHolder {
         TextView description;
         TextView quantity;
@@ -222,7 +241,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             }
         }
 
-        @Override
+@Override
         public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
             isDragging = false;
             if (dragStartPosition >= 0 && lastDropPosition >= 0 && dragStartPosition != lastDropPosition) {
@@ -236,6 +255,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             }
             dragStartPosition = -1;
             lastDropPosition = -1;
+            currentDragTargetPosition = -1;
             viewHolder.itemView.setAlpha(1.0f);
             viewHolder.itemView.setScaleX(1.0f);
             viewHolder.itemView.setScaleY(1.0f);
@@ -280,6 +300,7 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
             }
 
             lastDropPosition = toPos;
+            currentDragTargetPosition = toPos;
             notifyItemMoved(fromPos, toPos);
             return true;
         }

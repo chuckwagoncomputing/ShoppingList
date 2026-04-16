@@ -30,13 +30,15 @@ import androidx.annotation.Nullable;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.fragment.app.Fragment;
-import androidx.recyclerview.widget.DividerItemDecoration;
+
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.woefe.shoppinglist.R;
 import com.woefe.shoppinglist.shoppinglist.ListItem;
 import com.woefe.shoppinglist.shoppinglist.ShoppingList;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 public class ShoppingListFragment extends Fragment implements EditBar.EditBarListener, RecyclerListAdapter.DragListener {
 
@@ -88,9 +90,6 @@ public class ShoppingListFragment extends Fragment implements EditBar.EditBarLis
 
         layoutManager = new LinearLayoutManager(getActivity());
         recyclerView.setLayoutManager(layoutManager);
-
-        DividerItemDecoration divider = new DividerItemDecoration(getActivity(), DividerItemDecoration.VERTICAL);
-        recyclerView.addItemDecoration(divider);
 
         editBar = new EditBar(rootView, getActivity());
         editBar.addEditBarListener(this);

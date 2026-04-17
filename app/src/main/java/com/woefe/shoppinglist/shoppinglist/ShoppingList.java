@@ -172,6 +172,9 @@ public class ShoppingList extends ArrayList<ListItem> {
     @Override
     public synchronized ListItem remove(int index) {
         android.util.Log.d("ShoppingList", "remove: index=" + index + " current size=" + size());
+        if (index < 0 || index >= size()) {
+            return null;
+        }
         ListItem removedItem = super.get(index);
         UUID removedUuid = ((ListItem.ListItemWithUuid) removedItem).getUuid();
         boolean removedIsChecked = removedItem.isChecked();

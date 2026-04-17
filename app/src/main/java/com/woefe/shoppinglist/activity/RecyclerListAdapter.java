@@ -78,11 +78,10 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
                         }
                         break;
                     case ShoppingList.Event.ITEM_REMOVED:
-                        if (index >= 0 && index < listSize) {
-                            notifyItemRemoved(index);
-                        } else {
-                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_REMOVED out of bounds " + index);
+                        if (listSize == 0) {
                             notifyDataSetChanged();
+                        } else {
+                            notifyItemRemoved(index);
                         }
                         break;
                     default:
@@ -311,7 +310,7 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             }
         }
 
-@Override
+        @Override
         public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
             isDragging = false;
             if (dragStartPosition >= 0 && lastDropPosition >= 0 && dragStartPosition != lastDropPosition) {

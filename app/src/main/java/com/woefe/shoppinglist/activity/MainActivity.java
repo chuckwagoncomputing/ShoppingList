@@ -302,7 +302,6 @@ public class MainActivity extends BinderActivity implements
             return true;
         } else if (itemId == R.id.action_sort_manual) {
             if (currentListName != null) {
-                getBinder().reloadList(currentListName);
                 getBinder().setListSortComparator(currentListName, null);
             }
             saveSortOrder(SortType.MANUAL);
@@ -537,12 +536,6 @@ public class MainActivity extends BinderActivity implements
     private boolean isLightMode() {
         int currentNightMode = getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
         return currentNightMode == Configuration.UI_MODE_NIGHT_NO;
-    }
-
-    public void requestSync() {
-        if (currentListName != null) {
-            getBinder().reloadList(currentListName);
-        }
     }
 
     public SortType getCurrentSortOrder() {

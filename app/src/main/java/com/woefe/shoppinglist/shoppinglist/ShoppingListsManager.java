@@ -50,7 +50,6 @@ class ShoppingListsManager {
     private static final String TAG = ShoppingListsManager.class.getSimpleName();
     private static final String FILE_ENDING = ".lst";
 
-    private final Map<String, ShoppingListMetadata> trashcan = new HashMap<>();
     private final MetadataContainer shoppingListsMetadata = new MetadataContainer();
     private final List<ListsChangeListener> listeners = new LinkedList<>();
     private FileObserver directoryObserver;
@@ -110,21 +109,11 @@ class ShoppingListsManager {
         directoryObserver.stopWatching();
         directoryObserver = null;
 
-        for (ShoppingListMetadata metadata : trashcan.values()) {
-            metadata.observer.stopWatching();
-        }
         for (ShoppingListMetadata metadata : shoppingListsMetadata.values()) {
             metadata.observer.stopWatching();
         }
 
-        try {
-            writeAllUnsavedChanges();
-        } catch (IOException e) {
-            Log.v(getClass().getSimpleName(), "Writing of changes failed", e);
-        }
-
         shoppingListsMetadata.clear();
-        trashcan.clear();
     }
 
     private void maybeAddInitialList() {
@@ -239,7 +228,7 @@ class ShoppingListsManager {
                         Log.e(TAG, "Failed to relistAndWrite after delete", ex);
                     }
                     notifyListChanged(metadata, ShoppingList.Event.newOther());
-} else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
+                } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
                     android.util.Log.d("ShoppingListsManager", "onShoppingListUpdate: ITEM_CHANGED at index=" + index);
                     if (index >= 0 && index < list.size()) {
@@ -252,11 +241,9 @@ class ShoppingListsManager {
                     }
                 } else if (eventState == ShoppingList.Event.ITEM_MOVED) {
                     metadata.isDirty = true;
-                    try {
-                        writeOnly(metadata);
-                    } catch (IOException | UnmarshallException ex) {
-                        Log.e(TAG, "Failed to writeOnly on move", ex);
-                    }
+                    int newIndex = e.getNewIndex();
+                    UUID uuid = list.getUuid(newIndex);
+                    metadata.locallyModifiedOrders.put(uuid, newIndex);
                 } else if (eventState == ShoppingList.Event.ITEM_INSERTED) {
                     metadata.isDirty = true;
                     int newIndex = e.getIndex();
@@ -295,6 +282,7 @@ class ShoppingListsManager {
         Map<UUID, Boolean> localCheckedChanges = new HashMap<>(metadata.locallyModifiedChecked);
         Map<UUID, String> localDescChanges = new HashMap<>(metadata.locallyModifiedDescriptions);
         Map<UUID, String> localQtyChanges = new HashMap<>(metadata.locallyModifiedQuantities);
+        Map<UUID, Integer> localOrderChanges = new HashMap<>(metadata.locallyModifiedOrders);
         Set<UUID> localDeletions = new HashSet<>(metadata.locallyDeletedUuids);
         Set<UUID> localAddedUuids = new HashSet<>(metadata.locallyAddedUuids);
         Map<UUID, ListItem> localItemByUuid = new HashMap<>();
@@ -341,7 +329,9 @@ class ShoppingListsManager {
                         item.setQuantity(localQtyChanges.get(uuid));
                     }
                     android.util.Log.d("ShoppingListsManager", "relistAndWrite: adding item " + item.getDescription());
-                    metadata.shoppingList.addItemPreservingUuid(item);
+                    if (!localOrderChanges.containsKey(uuid)) {
+                        metadata.shoppingList.addItemPreservingUuid(item);
+                    }
                 }
 
                 for (UUID uuid : localAddedUuids) {
@@ -350,6 +340,13 @@ class ShoppingListsManager {
                         if (item != null) {
                             metadata.shoppingList.addItemPreservingUuid(item);
                         }
+                    }
+                }
+
+                for (UUID uuid : localOrderChanges.keySet()) {
+                    ListItem item = localItemByUuid.get(uuid);
+                    if (item != null) {
+                        metadata.shoppingList.add(localOrderChanges.get(uuid), item);
                     }
                 }
 
@@ -367,6 +364,7 @@ class ShoppingListsManager {
                 metadata.locallyModifiedDescriptions.clear();
                 metadata.locallyModifiedQuantities.clear();
                 metadata.locallyModifiedChecked.clear();
+                metadata.locallyModifiedOrders.clear();
             } else {
                 metadata.isDirty = true;
                 writeToFile(metadata);
@@ -374,6 +372,7 @@ class ShoppingListsManager {
                 metadata.locallyModifiedDescriptions.clear();
                 metadata.locallyModifiedQuantities.clear();
                 metadata.locallyModifiedChecked.clear();
+                metadata.locallyModifiedOrders.clear();
             }
         } finally {
             metadata.shoppingList.setSuppressNotifications(false);
@@ -382,31 +381,6 @@ class ShoppingListsManager {
             }
             metadata.isSyncing = false;
         }
-    }
-
-    private void writeOnly(ShoppingListMetadata metadata) throws IOException, UnmarshallException {
-        boolean wasDragging = metadata.isDragging;
-        metadata.isDragging = true;
-        metadata.isSyncing = true;
-        boolean hadListener = metadata.updateListener != null;
-        if (hadListener) {
-            metadata.shoppingList.removeListener(metadata.updateListener);
-        }
-        try {
-            writeToFile(metadata);
-            metadata.locallyAddedUuids.clear();
-            metadata.locallyModifiedDescriptions.clear();
-            metadata.locallyModifiedQuantities.clear();
-            metadata.locallyModifiedChecked.clear();
-        } finally {
-            if (hadListener) {
-                metadata.shoppingList.addListener(metadata.updateListener);
-            }
-            metadata.isSyncing = false;
-        }
-        new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            metadata.isDragging = wasDragging;
-        }, 500);
     }
 
     private void writeToFile(ShoppingListMetadata metadata) throws IOException, UnmarshallException {
@@ -478,24 +452,6 @@ class ShoppingListsManager {
         }
     }
 
-    private void writeAllUnsavedChanges() throws IOException {
-        // first empty trashcan and then write lists. This makes sure that a list that has been
-        // removed and was later re-added is not actually deleted.
-        for (ShoppingListMetadata metadata : trashcan.values()) {
-            new File(metadata.filename).delete();
-        }
-
-        for (ShoppingListMetadata metadata : shoppingListsMetadata.values()) {
-            if (metadata.isDirty) {
-                ShoppingList copy = new ShoppingList(metadata.shoppingList.getName());
-                copy.addAllWithoutNewId(metadata.shoppingList);
-                OutputStream os = new FileOutputStream(metadata.filename);
-                ShoppingListMarshaller.marshall(os, copy);
-                Log.d(getClass().getSimpleName(), "Wrote file " + metadata.filename);
-            }
-        }
-    }
-
     void addList(String name) throws ShoppingListException {
         if (hasList(name)) {
             throw new ShoppingListException("List already exists");
@@ -550,51 +506,6 @@ class ShoppingListsManager {
         return null;
     }
 
-    boolean reloadList(String name) {
-        ShoppingListMetadata metadata = shoppingListsMetadata.getByName(name);
-        if (metadata == null) {
-            return false;
-        }
-        if (metadata.isDragging) {
-            Log.d(TAG, "reloadList: skipping due to isDragging for " + name);
-            return false;
-        }
-        if (metadata.isDirty) {
-            try {
-                writeToFile(metadata);
-            } catch (IOException | UnmarshallException e) {
-                Log.e(TAG, "reloadList: failed to write", e);
-            }
-            metadata.isDirty = false;
-        }
-        File file = new File(metadata.filename);
-        if (!file.exists()) {
-            return false;
-        }
-        try {
-            boolean hadListener = metadata.updateListener != null;
-            if (hadListener) {
-                metadata.shoppingList.removeListener(metadata.updateListener);
-            }
-            try {
-                ShoppingList latestList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
-
-                metadata.shoppingList.clear();
-                metadata.shoppingList.addAllWithoutNewId(latestList);
-
-                metadata.isDirty = false;
-            } finally {
-                if (hadListener) {
-                    metadata.shoppingList.addListener(metadata.updateListener);
-                }
-            }
-            return true;
-        } catch (IOException | UnmarshallException e) {
-            Log.e(TAG, "Failed to reload list from file", e);
-            return false;
-        }
-    }
-
     void setListSortComparator(String name, Comparator<ListItem> comparator) {
         ShoppingListMetadata metadata = shoppingListsMetadata.getByName(name);
         if (metadata != null) {
@@ -622,6 +533,7 @@ class ShoppingListsManager {
         private Map<UUID, Boolean> locallyModifiedChecked = new HashMap<>();
         private Map<UUID, String> locallyModifiedDescriptions = new HashMap<>();
         private Map<UUID, String> locallyModifiedQuantities = new HashMap<>();
+        private Map<UUID, Integer> locallyModifiedOrders = new HashMap<>();
         private Set<UUID> locallyDeletedUuids = new HashSet<>();
         private Set<UUID> locallyAddedUuids = new HashSet<>();
         private Comparator<ListItem> sortComparator;

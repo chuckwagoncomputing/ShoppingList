@@ -130,10 +130,6 @@ public class ShoppingListService extends Service implements SharedPreferences.On
             return manager.getListFilename(listName);
         }
 
-        public boolean reloadList(String listName) {
-            return manager.reloadList(listName);
-        }
-
         public void setListSortComparator(String listName, Comparator<ListItem> comparator) {
             manager.setListSortComparator(listName, comparator);
         }

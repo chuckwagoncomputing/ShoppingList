@@ -19,6 +19,8 @@
 
 package com.woefe.shoppinglist.shoppinglist;
 
+import java.util.UUID;
+
 /**
  * @author Wolfgang Popp.
  */
@@ -26,11 +28,28 @@ public class ListItem {
     private boolean isChecked;
     private String description;
     private String quantity;
+    private UUID uuid;
 
-    public ListItem(boolean isChecked, String description, String quantity) {
+    public ListItem(boolean isChecked, String description, String quantity, UUID uuid) {
+        android.util.Log.d("ListItem", "ListItem: isChecked=" + isChecked + " desc=" + description + " qty=" + quantity + " uuid=" + uuid);
         this.isChecked = isChecked;
         this.description = description;
         this.quantity = quantity;
+        this.uuid = uuid;
+    }
+
+    public ListItem(boolean isChecked, String description, String quantity) {
+        this(isChecked, description, quantity, UUID.randomUUID());
+    }
+
+    public UUID getUuid() {
+        android.util.Log.d("ListItem", "getUuid: returning " + uuid);
+        return uuid;
+    }
+
+    public void setUuid(UUID uuid) {
+        android.util.Log.d("ListItem", "setUuid: setting to " + uuid);
+        this.uuid = uuid;
     }
 
     public boolean isChecked() {
@@ -57,16 +76,16 @@ public class ListItem {
         this.quantity = quantity;
     }
 
-    static class ListItemWithID extends ListItem {
-        private final int id;
+    static class ListItemWithUuid extends ListItem {
+        private final UUID uuid;
 
-        public ListItemWithID(int id, ListItem item) {
-            super(item.isChecked, item.description, item.quantity);
-            this.id = id;
+        public ListItemWithUuid(UUID uuid, ListItem item) {
+            super(item.isChecked, item.description, item.quantity, item.getUuid());
+            this.uuid = uuid;
         }
 
-        public int getId() {
-            return id;
+        public UUID getUuid() {
+            return uuid;
         }
 
     }

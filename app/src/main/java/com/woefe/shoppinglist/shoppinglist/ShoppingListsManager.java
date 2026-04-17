@@ -41,6 +41,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 /**
  * @author Wolfgang Popp.
@@ -178,6 +179,7 @@ class ShoppingListsManager {
                 }
                 existing.isSyncing = true;
                 try {
+                    existing.shoppingList.setSuppressNotifications(true);
                     existing.shoppingList.clear();
                     existing.shoppingList.addAllWithoutNewId(list);
                     existing.isDirty = false;
@@ -185,6 +187,8 @@ class ShoppingListsManager {
                     if (existing.sortComparator != null) {
                         existing.shoppingList.sort(existing.sortComparator);
                     }
+                    existing.shoppingList.setSuppressNotifications(false);
+                    existing.shoppingList.notifyListChanged(ShoppingList.Event.newOther());
                     shoppingListsMetadata.notifyListeners();
                 } catch (Exception e) {
                     Log.e(TAG, "Error during loadFromFile update", e);
@@ -224,14 +228,10 @@ class ShoppingListsManager {
                 }
                 int eventState = e.getState();
                 if (eventState == ShoppingList.Event.ITEM_REMOVED) {
-                    int removedId = e.getRemovedId();
+                    UUID removedUuid = e.getRemovedUuid();
                     boolean removedIsChecked = e.getRemovedIsChecked();
-                    String removedDesc = e.getRemovedDescription();
-                    metadata.locallyDeletedIds.add(removedId);
-                    metadata.locallyModifiedChecked.put(removedId, removedIsChecked);
-                    if (removedDesc != null) {
-                        metadata.locallyDeletedDescriptions.add(removedDesc.toLowerCase());
-                    }
+                    metadata.locallyDeletedUuids.add(removedUuid);
+                    metadata.locallyModifiedChecked.put(removedUuid, removedIsChecked);
                     metadata.isDirty = true;
                     try {
                         relistAndWrite(metadata);
@@ -242,11 +242,11 @@ class ShoppingListsManager {
 } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
                     if (index >= 0 && index < list.size()) {
-                        int id = list.getId(index);
-                        metadata.locallyModifiedChecked.put(id, list.get(index).isChecked());
-                        metadata.locallyModifiedDescriptions.put(id, list.get(index).getDescription());
-                        metadata.locallyModifiedQuantities.put(id, list.get(index).getQuantity());
-                        metadata.locallyDeletedIds.remove(id);
+                        UUID uuid = list.getUuid(index);
+                        metadata.locallyModifiedChecked.put(uuid, list.get(index).isChecked());
+                        metadata.locallyModifiedDescriptions.put(uuid, list.get(index).getDescription());
+                        metadata.locallyModifiedQuantities.put(uuid, list.get(index).getQuantity());
+                        metadata.locallyDeletedUuids.remove(uuid);
                     }
                 } else if (eventState == ShoppingList.Event.ITEM_MOVED) {
                     metadata.isDirty = true;
@@ -259,8 +259,8 @@ class ShoppingListsManager {
                     metadata.isDirty = true;
                     int newIndex = e.getIndex();
                     if (newIndex >= 0 && newIndex < list.size()) {
-                        int newId = list.getId(newIndex);
-                        metadata.locallyNewIds.add(newId);
+                        UUID newUuid = list.getUuid(newIndex);
+                        metadata.locallyAddedUuids.add(newUuid);
                     }
                 } else if (eventState == ShoppingList.Event.OTHER) {
                     return;
@@ -280,7 +280,9 @@ class ShoppingListsManager {
     }
 
     private void relistAndWrite(ShoppingListMetadata metadata) throws IOException, UnmarshallException {
+        android.util.Log.d("ShoppingListsManager", "relistAndWrite: START");
         metadata.isSyncing = true;
+        android.util.Log.d("ShoppingListsManager", "relistAndWrite: current list size=" + metadata.shoppingList.size());
         boolean hadListener = metadata.updateListener != null;
         if (hadListener) {
             metadata.shoppingList.removeListener(metadata.updateListener);
@@ -288,93 +290,82 @@ class ShoppingListsManager {
 
         metadata.shoppingList.setSuppressNotifications(true);
 
-        Map<Integer, Boolean> localCheckedChanges = new HashMap<>(metadata.locallyModifiedChecked);
-        Map<Integer, String> localDescChanges = new HashMap<>(metadata.locallyModifiedDescriptions);
-        Map<Integer, String> localQtyChanges = new HashMap<>(metadata.locallyModifiedQuantities);
-        Set<Integer> localDeletions = new HashSet<>(metadata.locallyDeletedIds);
-        Set<Integer> localNewIds = new HashSet<>(metadata.locallyNewIds);
-        Set<String> localDeletedDescriptions = new HashSet<>(metadata.locallyDeletedDescriptions);
-        List<ListItem> localNewItems = new ArrayList<>(metadata.shoppingList);
+        Map<UUID, Boolean> localCheckedChanges = new HashMap<>(metadata.locallyModifiedChecked);
+        Map<UUID, String> localDescChanges = new HashMap<>(metadata.locallyModifiedDescriptions);
+        Map<UUID, String> localQtyChanges = new HashMap<>(metadata.locallyModifiedQuantities);
+        Set<UUID> localDeletions = new HashSet<>(metadata.locallyDeletedUuids);
+        Set<UUID> localAddedUuids = new HashSet<>(metadata.locallyAddedUuids);
+        Map<UUID, ListItem> localItemByUuid = new HashMap<>();
+        for (ListItem item : metadata.shoppingList) {
+            UUID uuid = item.getUuid();
+            if (uuid != null) {
+                localItemByUuid.put(uuid, item);
+            }
+        }
 
         try {
             File file = new File(metadata.filename);
             if (file.exists()) {
                 ShoppingList latestList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
-                Set<Integer> fileIds = new HashSet<>();
+                Set<UUID> fileUuids = new HashSet<>();
                 for (int i = 0; i < latestList.size(); i++) {
-                    fileIds.add(latestList.getId(i));
+                    UUID uuid = latestList.getUuid(i);
+                    if (uuid != null) {
+                        fileUuids.add(uuid);
+                    }
                 }
 
+                android.util.Log.d("ShoppingListsManager", "relistAndWrite: clearing list");
                 metadata.shoppingList.clear();
+                android.util.Log.d("ShoppingListsManager", "relistAndWrite: after clear, size=" + metadata.shoppingList.size());
 
-                // Apply local changes by finding matching items by description in localNewItems
                 for (int i = 0; i < latestList.size(); i++) {
                     ListItem item = latestList.get(i);
-                    int fileItemId = latestList.getId(i);
-                    String descLower = item.getDescription().toLowerCase();
-                    // Skip items that were marked as deleted locally (by ID or by description)
-                    if (localDeletions.contains(fileItemId) || localDeletedDescriptions.contains(descLower)) {
+                    UUID uuid = item.getUuid();
+                    android.util.Log.d("ShoppingListsManager", "relistAndWrite: processing i=" + i + " uuid=" + uuid);
+
+                    if (uuid == null || localDeletions.contains(uuid)) {
+                        android.util.Log.d("ShoppingListsManager", "relistAndWrite: skipping " + uuid);
                         continue;
                     }
-                    
-                    // Try to find matching local item by description
-                    // First try exact match, if not found check if any local item has a pending change
-                    // (meaning this file item corresponds to an edited local item)
-                    int actualLocalId = -1;
-                    for (ListItem localItem : localNewItems) {
-                        int localId = ((ListItem.ListItemWithID) localItem).getId();
-                        String localDesc = localItem.getDescription().toLowerCase();
-                        // If exact description match, this is the item
-                        if (localDesc.equals(descLower)) {
-                            actualLocalId = localId;
-                            break;
-                        }
-                        // If this local item has a pending description change, it might be this one
-                        // (we can't do better without tracking old values)
-                        if (localDescChanges.containsKey(localId) || localQtyChanges.containsKey(localId)) {
-                            actualLocalId = localId;
-                            // Don't break - keep looking for exact match
-                        }
+
+                    if (localCheckedChanges.containsKey(uuid)) {
+                        item.setChecked(localCheckedChanges.get(uuid));
                     }
-                    
-                    // Apply local checked state by ID
-                    if (actualLocalId != -1 && localCheckedChanges.containsKey(actualLocalId)) {
-                        item.setChecked(localCheckedChanges.get(actualLocalId));
+                    if (localDescChanges.containsKey(uuid)) {
+                        item.setDescription(localDescChanges.get(uuid));
                     }
-                    
-                    // Apply local description/quantity changes by ID
-                    if (actualLocalId != -1 && localDescChanges.containsKey(actualLocalId)) {
-                        item.setDescription(localDescChanges.get(actualLocalId));
+                    if (localQtyChanges.containsKey(uuid)) {
+                        item.setQuantity(localQtyChanges.get(uuid));
                     }
-                    if (actualLocalId != -1 && localQtyChanges.containsKey(actualLocalId)) {
-                        item.setQuantity(localQtyChanges.get(actualLocalId));
-                    }
-                    metadata.shoppingList.addItemPreservingId(item);
+                    android.util.Log.d("ShoppingListsManager", "relistAndWrite: adding item " + item.getDescription());
+                    metadata.shoppingList.addItemPreservingUuid(item);
                 }
 
-                for (Integer newId : localNewIds) {
-                    if (!fileIds.contains(newId)) {
-                        for (int i = 0; i < localNewItems.size(); i++) {
-                            ListItem item = localNewItems.get(i);
-                            if (((ListItem.ListItemWithID) item).getId() == newId) {
-                                metadata.shoppingList.addItemPreservingId(item);
-                                break;
-                            }
+                for (UUID uuid : localAddedUuids) {
+                    if (!fileUuids.contains(uuid)) {
+                        ListItem item = localItemByUuid.get(uuid);
+                        if (item != null) {
+                            metadata.shoppingList.addItemPreservingUuid(item);
                         }
                     }
+                }
+
+                if (metadata.sortComparator != null) {
+                    android.util.Log.d("ShoppingListsManager", "relistAndWrite: applying sort");
+                    metadata.shoppingList.sort(metadata.sortComparator);
                 }
 
                 metadata.isDirty = true;
                 writeToFile(metadata);
-                metadata.locallyNewIds.clear();
+                metadata.locallyAddedUuids.clear();
                 metadata.locallyModifiedDescriptions.clear();
                 metadata.locallyModifiedQuantities.clear();
                 metadata.locallyModifiedChecked.clear();
             } else {
-                // File doesn't exist, just write current state
                 metadata.isDirty = true;
                 writeToFile(metadata);
-                metadata.locallyNewIds.clear();
+                metadata.locallyAddedUuids.clear();
                 metadata.locallyModifiedDescriptions.clear();
                 metadata.locallyModifiedQuantities.clear();
                 metadata.locallyModifiedChecked.clear();
@@ -398,7 +389,7 @@ class ShoppingListsManager {
         }
         try {
             writeToFile(metadata);
-            metadata.locallyNewIds.clear();
+            metadata.locallyAddedUuids.clear();
             metadata.locallyModifiedDescriptions.clear();
             metadata.locallyModifiedQuantities.clear();
             metadata.locallyModifiedChecked.clear();
@@ -582,10 +573,6 @@ class ShoppingListsManager {
             }
             try {
                 ShoppingList latestList = ShoppingListUnmarshaller.unmarshal(metadata.filename);
-                Set<Integer> fileIds = new HashSet<>();
-                for (int i = 0; i < latestList.size(); i++) {
-                    fileIds.add(latestList.getId(i));
-                }
 
                 metadata.shoppingList.clear();
                 metadata.shoppingList.addAllWithoutNewId(latestList);
@@ -627,12 +614,11 @@ class ShoppingListsManager {
         private boolean pendingWrite;
         private FileObserver observer;
         private ShoppingList.ShoppingListListener updateListener;
-        private Map<Integer, Boolean> locallyModifiedChecked = new HashMap<>();
-        private Map<Integer, String> locallyModifiedDescriptions = new HashMap<>();
-        private Map<Integer, String> locallyModifiedQuantities = new HashMap<>();
-        private Set<Integer> locallyDeletedIds = new HashSet<>();
-        private Set<Integer> locallyNewIds = new HashSet<>();
-        private Set<String> locallyDeletedDescriptions = new HashSet<>();
+        private Map<UUID, Boolean> locallyModifiedChecked = new HashMap<>();
+        private Map<UUID, String> locallyModifiedDescriptions = new HashMap<>();
+        private Map<UUID, String> locallyModifiedQuantities = new HashMap<>();
+        private Set<UUID> locallyDeletedUuids = new HashSet<>();
+        private Set<UUID> locallyAddedUuids = new HashSet<>();
         private Comparator<ListItem> sortComparator;
 
         private ShoppingListMetadata(ShoppingList shoppingList, String filename) {

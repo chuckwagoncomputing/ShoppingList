@@ -25,6 +25,7 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
+import java.util.UUID;
 
 public class ShoppingListMarshaller {
     public static void marshall(@NonNull OutputStream stream, @NonNull ShoppingList list) throws IOException {
@@ -33,6 +34,7 @@ public class ShoppingListMarshaller {
             for (ListItem item : list) {
                 String quantity = item.getQuantity();
                 String description = item.getDescription();
+                UUID uuid = item.getUuid();
 
                 if (item.isChecked()) {
                     writer.write("// ");
@@ -45,6 +47,11 @@ public class ShoppingListMarshaller {
                 if (quantity != null && !quantity.equals("")) {
                     writer.write(" #");
                     writer.write(quantity);
+                }
+
+                if (uuid != null) {
+                    writer.write(" @");
+                    writer.write(uuid.toString());
                 }
 
                 writer.write("\n");

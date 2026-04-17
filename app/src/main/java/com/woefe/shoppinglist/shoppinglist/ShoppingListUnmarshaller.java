@@ -25,6 +25,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -52,17 +53,42 @@ public class ShoppingListUnmarshaller {
         return shoppingList;
     }
 
-    private static ListItem createListItem(String item) {
-        boolean isChecked = item.startsWith("//");
-        int index;
-        String quantity;
-        String name;
-
+    private static ListItem createListItem(String line) {
+        android.util.Log.d("Unmarshaller", "createListItem: INPUT line=[" + line + "]");
+        boolean isChecked = line.startsWith("//");
         if (isChecked) {
-            item = item.substring(2);
+            line = line.substring(2);
         }
 
-        index = item.lastIndexOf("#");
+        UUID uuid = null;
+        String item = line;
+
+        int atIndex = line.lastIndexOf("@");
+        android.util.Log.d("Unmarshaller", "createListItem: atIndex=" + atIndex + " line.length=" + line.length());
+        if (atIndex != -1) {
+            String uuidStr = line.substring(atIndex + 1).trim();
+            android.util.Log.d("Unmarshaller", "createListItem: uuidStr=[" + uuidStr + "] len=" + uuidStr.length());
+            if (uuidStr.length() == 36) {
+                try {
+                    uuid = UUID.fromString(uuidStr);
+                    item = line.substring(0, atIndex).trim();
+                    android.util.Log.d("Unmarshaller", "createListItem: SUCCESS parsed uuid=" + uuid);
+                } catch (IllegalArgumentException e) {
+                    android.util.Log.d("Unmarshaller", "createListItem: FAILED parse uuidStr=" + uuidStr);
+                    item = line.trim();
+                }
+            } else {
+                android.util.Log.d("Unmarshaller", "createListItem: wrong length " + uuidStr.length());
+                item = line.trim();
+            }
+        } else {
+            android.util.Log.d("Unmarshaller", "createListItem: no @ found");
+            item = line.trim();
+        }
+
+        int index = item.lastIndexOf("#");
+        String quantity;
+        String name;
 
         if (index != -1) {
             quantity = item.substring(index + 1).trim();
@@ -72,6 +98,7 @@ public class ShoppingListUnmarshaller {
             name = item.trim();
         }
 
-        return new ListItem(isChecked, name.trim(), quantity);
+        android.util.Log.d("Unmarshaller", "createListItem: isChecked=" + isChecked + " name=" + name + " quantity=" + quantity + " uuid=" + uuid);
+        return new ListItem(isChecked, name.trim(), quantity, uuid);
     }
 }

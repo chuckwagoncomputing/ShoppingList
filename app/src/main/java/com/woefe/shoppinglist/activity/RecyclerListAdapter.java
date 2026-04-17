@@ -34,28 +34,64 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     private MainActivity mainActivity;
     private boolean dragHandlerEnabled = true;
     private RecyclerView recyclerView;
+    private volatile boolean isProcessingNotification = false;
 
-    private final ShoppingList.ShoppingListListener listener = new ShoppingList.ShoppingListListener() {
+private final ShoppingList.ShoppingListListener listener = new ShoppingList.ShoppingListListener() {
         @Override
         public void onShoppingListUpdate(ShoppingList list, ShoppingList.Event e) {
-            switch (e.getState()) {
-                case ShoppingList.Event.ITEM_CHANGED:
-                    notifyItemChanged(e.getIndex());
-                    break;
-                case ShoppingList.Event.ITEM_INSERTED:
-                    notifyItemInserted(e.getIndex());
-                    break;
-                case ShoppingList.Event.ITEM_MOVED:
-                    if (e.getOldIndex() >= 0 && e.getNewIndex() >= 0 && e.getOldIndex() != e.getNewIndex()) {
-                        notifyItemMoved(e.getOldIndex(), e.getNewIndex());
+            if (isProcessingNotification) {
+                android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: already processing, skipping");
+                return;
+            }
+            isProcessingNotification = true;
+            try {
+                int listSize = list.size();
+                int index = e.getIndex();
+                android.util.Log.d("RecyclerListAdapter", "onShoppingListUpdate: state=" + e.getState() + " index=" + index + " size=" + listSize);
+                
+                switch (e.getState()) {
+                    case ShoppingList.Event.ITEM_CHANGED:
+                        if (index >= 0 && index < listSize) {
+                            notifyItemChanged(index);
+                        } else {
+                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_CHANGED out of bounds " + index);
+                            notifyDataSetChanged();
+                        }
+                        break;
+                    case ShoppingList.Event.ITEM_INSERTED:
+                        if (index >= 0 && index <= listSize) {
+                            notifyItemInserted(index);
+                        } else {
+                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_INSERTED out of bounds " + index);
+                            notifyDataSetChanged();
+                        }
+                        break;
+                    case ShoppingList.Event.ITEM_MOVED:
+                        int oldIndex = e.getOldIndex();
+                        int newIndex = e.getNewIndex();
+                        if (oldIndex >= 0 && newIndex >= 0 && oldIndex < listSize && newIndex < listSize && oldIndex != newIndex) {
+                            notifyItemMoved(oldIndex, newIndex);
+                            notifyDataSetChanged();
+                        } else {
+                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_MOVED out of bounds old=" + oldIndex + " new=" + newIndex);
+                            notifyDataSetChanged();
+                        }
+                        break;
+                    case ShoppingList.Event.ITEM_REMOVED:
+                        if (index >= 0 && index < listSize) {
+                            notifyItemRemoved(index);
+                        } else {
+                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_REMOVED out of bounds " + index);
+                            notifyDataSetChanged();
+                        }
+                        break;
+                    default:
                         notifyDataSetChanged();
-                    }
-                    break;
-                case ShoppingList.Event.ITEM_REMOVED:
-                    notifyItemRemoved(e.getIndex());
-                    break;
-                default:
-                    notifyDataSetChanged();
+                }
+            } catch (Exception ex) {
+                android.util.Log.e("RecyclerListAdapter", "onShoppingListUpdate: exception", ex);
+            } finally {
+                isProcessingNotification = false;
             }
         }
     };
@@ -137,9 +173,19 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
+        android.util.Log.d("RecyclerListAdapter", "onBindViewHolder: position=" + position);
+        if (shoppingList == null || position < 0 || position >= shoppingList.size()) {
+            android.util.Log.e("RecyclerListAdapter", "onBindViewHolder: invalid position " + position + " size=" + (shoppingList == null ? "null" : shoppingList.size()));
+            return;
+        }
         ListItem listItem = shoppingList.get(position);
+        if (listItem == null) {
+            android.util.Log.e("RecyclerListAdapter", "onBindViewHolder: null item at position " + position);
+            return;
+        }
         holder.description.setText(listItem.getDescription());
         holder.quantity.setText(listItem.getQuantity());
+        android.util.Log.d("RecyclerListAdapter", "onBindViewHolder: bound " + listItem.getDescription() + " uuid=" + listItem.getUuid());
 
         if (listItem.isChecked()) {
             holder.description.setTextColor(colorChecked);
@@ -184,10 +230,12 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
 
     @Override
     public int getItemCount() {
-        if (shoppingList != null) {
-            return shoppingList.size();
+        synchronized (this) {
+            if (shoppingList != null) {
+                return shoppingList.size();
+            }
+            return 0;
         }
-        return 0;
     }
 
     public interface ItemLongClickListener {

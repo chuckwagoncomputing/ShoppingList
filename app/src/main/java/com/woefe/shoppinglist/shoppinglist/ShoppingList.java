@@ -295,6 +295,9 @@ public class ShoppingList extends ArrayList<ListItem> {
         android.util.Log.d("ShoppingList", "setChecked: index=" + index + " isChecked=" + isChecked);
         ListItem item;
         synchronized (this) {
+            if (index < 0 || index >= size()) {
+                return;
+            }
             item = get(index);
             item.setChecked(isChecked);
         }
@@ -304,6 +307,10 @@ public class ShoppingList extends ArrayList<ListItem> {
     public void toggleChecked(int index) {
         boolean newChecked;
         synchronized (this) {
+            if (index < 0 || index >= size()) {
+                android.util.Log.e("ShoppingList", "toggleChecked: index out of bounds " + index + " size=" + size() + " stack:", new Exception("toggleChecked OOB"));
+                return;
+            }
             newChecked = !get(index).isChecked();
             get(index).setChecked(newChecked);
         }

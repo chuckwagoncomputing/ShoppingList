@@ -90,7 +90,7 @@ class ShoppingListsManager {
                     case FileObserver.CLOSE_WRITE:
                     case FileObserver.MODIFY:
                         ShoppingListMetadata metadata = shoppingListsMetadata.getByFile(file.getPath());
-                        if (metadata != null && metadata.isDragging) {
+                        if (metadata != null && (metadata.isDragging || metadata.isSyncing)) {
                             return;
                         }
                         loadFromFile(file);

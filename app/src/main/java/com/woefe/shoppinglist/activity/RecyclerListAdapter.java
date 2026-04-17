@@ -197,10 +197,15 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
         holder.itemView.setBackgroundColor(colorBackground);
 
+        final int boundPosition = position;
         holder.view.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                shoppingList.toggleChecked(holder.getAdapterPosition());
+                if (shoppingList != null && boundPosition >= 0 && boundPosition < shoppingList.size()) {
+                    shoppingList.toggleChecked(boundPosition);
+                } else {
+                    android.util.Log.w("RecyclerListAdapter", "onClick: invalid state, skipping toggle");
+                }
             }
         });
 
@@ -209,7 +214,7 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             @Override
             public boolean onLongClick(View v) {
                 return longClickListener != null
-                        && longClickListener.onLongClick(holder.getAdapterPosition());
+                        && longClickListener.onLongClick(boundPosition);
             }
         });
 

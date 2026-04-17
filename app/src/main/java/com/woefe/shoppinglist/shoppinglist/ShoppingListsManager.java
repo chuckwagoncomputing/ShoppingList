@@ -241,8 +241,10 @@ class ShoppingListsManager {
                     notifyListChanged(metadata, ShoppingList.Event.newOther());
 } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
+                    android.util.Log.d("ShoppingListsManager", "onShoppingListUpdate: ITEM_CHANGED at index=" + index);
                     if (index >= 0 && index < list.size()) {
                         UUID uuid = list.getUuid(index);
+                        android.util.Log.d("ShoppingListsManager", "onShoppingListUpdate: ITEM_CHANGED uuid=" + uuid + " isChecked=" + list.get(index).isChecked());
                         metadata.locallyModifiedChecked.put(uuid, list.get(index).isChecked());
                         metadata.locallyModifiedDescriptions.put(uuid, list.get(index).getDescription());
                         metadata.locallyModifiedQuantities.put(uuid, list.get(index).getQuantity());
@@ -351,13 +353,16 @@ class ShoppingListsManager {
                     }
                 }
 
-                if (metadata.sortComparator != null) {
-                    android.util.Log.d("ShoppingListsManager", "relistAndWrite: applying sort");
-                    metadata.shoppingList.sort(metadata.sortComparator);
+                for (int i = 0; i < metadata.shoppingList.size(); i++) {
+                    ListItem it = metadata.shoppingList.get(i);
+                    android.util.Log.d("ShoppingListsManager", "relistAndWrite: item " + i + " uuid=" + it.getUuid() + " desc=" + it.getDescription());
                 }
 
                 metadata.isDirty = true;
                 writeToFile(metadata);
+                if (metadata.sortComparator != null) {
+                    metadata.shoppingList.sort(metadata.sortComparator);
+                }
                 metadata.locallyAddedUuids.clear();
                 metadata.locallyModifiedDescriptions.clear();
                 metadata.locallyModifiedQuantities.clear();

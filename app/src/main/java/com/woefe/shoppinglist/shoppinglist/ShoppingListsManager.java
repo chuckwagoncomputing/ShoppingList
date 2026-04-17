@@ -307,19 +307,7 @@ class ShoppingListsManager {
 
                 metadata.shoppingList.clear();
 
-                // Build a map of descriptions to checked state from local changes
-                Map<String, Boolean> localCheckedByDesc = new HashMap<>();
-                for (Map.Entry<Integer, Boolean> entry : localCheckedChanges.entrySet()) {
-                    int id = entry.getKey();
-                    Boolean checked = entry.getValue();
-                    for (ListItem item : localNewItems) {
-                        if (((ListItem.ListItemWithID) item).getId() == id) {
-                            localCheckedByDesc.put(item.getDescription().toLowerCase(), checked);
-                            break;
-                        }
-                    }
-                }
-
+                // Apply local changes by finding matching items by description in localNewItems
                 for (int i = 0; i < latestList.size(); i++) {
                     ListItem item = latestList.get(i);
                     int fileItemId = latestList.getId(i);
@@ -328,15 +316,38 @@ class ShoppingListsManager {
                     if (localDeletions.contains(fileItemId) || localDeletedDescriptions.contains(descLower)) {
                         continue;
                     }
-                    if (localCheckedByDesc.containsKey(descLower)) {
-                        item.setChecked(localCheckedByDesc.get(descLower));
+                    
+                    // Try to find matching local item by description
+                    // First try exact match, if not found check if any local item has a pending change
+                    // (meaning this file item corresponds to an edited local item)
+                    int actualLocalId = -1;
+                    for (ListItem localItem : localNewItems) {
+                        int localId = ((ListItem.ListItemWithID) localItem).getId();
+                        String localDesc = localItem.getDescription().toLowerCase();
+                        // If exact description match, this is the item
+                        if (localDesc.equals(descLower)) {
+                            actualLocalId = localId;
+                            break;
+                        }
+                        // If this local item has a pending description change, it might be this one
+                        // (we can't do better without tracking old values)
+                        if (localDescChanges.containsKey(localId) || localQtyChanges.containsKey(localId)) {
+                            actualLocalId = localId;
+                            // Don't break - keep looking for exact match
+                        }
                     }
+                    
+                    // Apply local checked state by ID
+                    if (actualLocalId != -1 && localCheckedChanges.containsKey(actualLocalId)) {
+                        item.setChecked(localCheckedChanges.get(actualLocalId));
+                    }
+                    
                     // Apply local description/quantity changes by ID
-                    if (localDescChanges.containsKey(fileItemId)) {
-                        item.setDescription(localDescChanges.get(fileItemId));
+                    if (actualLocalId != -1 && localDescChanges.containsKey(actualLocalId)) {
+                        item.setDescription(localDescChanges.get(actualLocalId));
                     }
-                    if (localQtyChanges.containsKey(fileItemId)) {
-                        item.setQuantity(localQtyChanges.get(fileItemId));
+                    if (actualLocalId != -1 && localQtyChanges.containsKey(actualLocalId)) {
+                        item.setQuantity(localQtyChanges.get(actualLocalId));
                     }
                     metadata.shoppingList.addItemPreservingId(item);
                 }
@@ -356,11 +367,17 @@ class ShoppingListsManager {
                 metadata.isDirty = true;
                 writeToFile(metadata);
                 metadata.locallyNewIds.clear();
+                metadata.locallyModifiedDescriptions.clear();
+                metadata.locallyModifiedQuantities.clear();
+                metadata.locallyModifiedChecked.clear();
             } else {
                 // File doesn't exist, just write current state
                 metadata.isDirty = true;
                 writeToFile(metadata);
                 metadata.locallyNewIds.clear();
+                metadata.locallyModifiedDescriptions.clear();
+                metadata.locallyModifiedQuantities.clear();
+                metadata.locallyModifiedChecked.clear();
             }
         } finally {
             metadata.shoppingList.setSuppressNotifications(false);
@@ -381,6 +398,10 @@ class ShoppingListsManager {
         }
         try {
             writeToFile(metadata);
+            metadata.locallyNewIds.clear();
+            metadata.locallyModifiedDescriptions.clear();
+            metadata.locallyModifiedQuantities.clear();
+            metadata.locallyModifiedChecked.clear();
         } finally {
             if (hadListener) {
                 metadata.shoppingList.addListener(metadata.updateListener);

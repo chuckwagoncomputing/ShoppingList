@@ -79,6 +79,15 @@ public class ShoppingList extends ArrayList<ListItem> {
         }
     }
 
+    public int indexOfUuid(UUID uuid) {
+        for (int i = 0; i < this.size(); i++) {
+            if (uuid.equals(this.get(i).getUuid())) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
     @Override
     public synchronized boolean add(ListItem item) {
         boolean res = super.add(item);

@@ -121,7 +121,7 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
         if (sortedItemsCache != null) {
             return sortedItemsCache.indexOf(item);
         }
-        return shoppingList.indexOf(item);
+        return shoppingList.indexOfUuid(item.getUuid());
     }
 
     public int getListIndexFromDisplayPosition(int displayPosition) {
@@ -135,7 +135,7 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             return -1;
         }
         android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: displayPos=" + displayPosition + " item=" + item.getDescription() + " item.class=" + item.getClass().getSimpleName() + " item.uuid=" + item.getUuid());
-        int idx = shoppingList.indexOf(item);
+        int idx = shoppingList.indexOfUuid(item.getUuid());
         android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: result=" + idx + " shoppingList.size=" + shoppingList.size());
         if (idx < 0) {
             for (int i = 0; i < shoppingList.size(); i++) {
@@ -249,7 +249,7 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             @Override
             public void onClick(View v) {
                 if (shoppingList != null && boundItem != null) {
-                    int listIndex = shoppingList.indexOf(boundItem);
+                    int listIndex = shoppingList.indexOfUuid(boundItem.getUuid());
                     if (listIndex >= 0) {
                         shoppingList.toggleChecked(listIndex);
                     }
@@ -262,7 +262,7 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             @Override
             public boolean onLongClick(View v) {
                 if (shoppingList != null && boundItem != null) {
-                    int listIndex = shoppingList.indexOf(boundItem);
+                    int listIndex = shoppingList.indexOfUuid(boundItem.getUuid());
                     return longClickListener != null && listIndex >= 0 && longClickListener.onLongClick(listIndex);
                 }
                 return false;

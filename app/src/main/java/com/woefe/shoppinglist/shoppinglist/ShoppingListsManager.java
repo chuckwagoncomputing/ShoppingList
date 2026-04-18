@@ -173,9 +173,6 @@ class ShoppingListsManager {
                     existing.shoppingList.addAllWithoutNewId(list);
                     existing.isDirty = false;
                     rename(existing.shoppingList.getName(), list.getName());
-                    if (existing.sortComparator != null) {
-                        existing.shoppingList.sort(existing.sortComparator);
-                    }
                     existing.shoppingList.setSuppressNotifications(false);
                     existing.shoppingList.notifyListChanged(ShoppingList.Event.newOther());
                     shoppingListsMetadata.notifyListeners();
@@ -357,9 +354,6 @@ class ShoppingListsManager {
 
                 metadata.isDirty = true;
                 writeToFile(metadata);
-                if (metadata.sortComparator != null) {
-                    metadata.shoppingList.sort(metadata.sortComparator);
-                }
                 metadata.locallyAddedUuids.clear();
                 metadata.locallyModifiedDescriptions.clear();
                 metadata.locallyModifiedQuantities.clear();
@@ -422,10 +416,6 @@ class ShoppingListsManager {
 
                                     String oldName = metadata.shoppingList.getName();
                                     rename(oldName, list.getName());
-                                    
-                                    if (metadata.sortComparator != null) {
-                                        metadata.shoppingList.sort(metadata.sortComparator);
-                                    }
                                 } catch (IOException | UnmarshallException e) {
                                     Log.e(TAG, "FileObserver could not read file.", e);
                                 } finally {

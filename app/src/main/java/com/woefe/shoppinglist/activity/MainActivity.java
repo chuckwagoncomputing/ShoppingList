@@ -304,6 +304,12 @@ public class MainActivity extends BinderActivity implements
             if (currentListName != null) {
                 getBinder().setListSortComparator(currentListName, null);
             }
+            if (currentFragment instanceof ShoppingListFragment) {
+                RecyclerListAdapter adapter = ((ShoppingListFragment) currentFragment).getRecyclerListAdapter();
+                if (adapter != null) {
+                    adapter.setSortComparator(null);
+                }
+            }
             saveSortOrder(SortType.MANUAL);
             updateDragHandlerState();
             return true;
@@ -345,7 +351,7 @@ public class MainActivity extends BinderActivity implements
     }
 
     private void applySortOrder(ShoppingList list, SortType sortType) {
-        if (list == null || sortType == SortType.NONE) {
+        if (list == null) {
             return;
         }
         saveSortOrder(sortType);
@@ -396,11 +402,14 @@ public class MainActivity extends BinderActivity implements
                 };
                 break;
         }
-        if (comparator != null) {
-            list.sort(comparator);
-            if (currentListName != null) {
-                getBinder().setListSortComparator(currentListName, comparator);
+        if (currentFragment instanceof ShoppingListFragment) {
+            RecyclerListAdapter adapter = ((ShoppingListFragment) currentFragment).getRecyclerListAdapter();
+            if (adapter != null) {
+                adapter.setSortComparator(comparator);
             }
+        }
+        if (comparator != null && currentListName != null) {
+            getBinder().setListSortComparator(currentListName, comparator);
         }
         updateDragHandlerState();
     }

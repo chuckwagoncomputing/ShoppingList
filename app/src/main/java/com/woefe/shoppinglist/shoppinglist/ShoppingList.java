@@ -45,6 +45,7 @@ public class ShoppingList extends ArrayList<ListItem> {
     private String name;
     private final List<ShoppingListListener> listeners = new LinkedList<>();
     private boolean suppressNotifications = false;
+    private Comparator<? super ListItem> sortComparator = null;
 
     public ShoppingList(String name) {
         super();
@@ -272,26 +273,12 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     @Override
     public void sort(Comparator<? super ListItem> c) {
-        ListItem[] items = toArray(new ListItem[size()]);
-        Arrays.sort(items, c);
-        
-        boolean wasSuppressed = suppressNotifications;
-        suppressNotifications = true;
-        super.clear();
-        
-        for (ListItem item : items) {
-            UUID uuid = item.getUuid();
-            if (uuid != null) {
-                ListItem.ListItemWithUuid withUuid = new ListItem.ListItemWithUuid(uuid, item);
-                super.add(withUuid);
-            } else {
-                ListItem.ListItemWithUuid withUuid = new ListItem.ListItemWithUuid(UUID.randomUUID(), item);
-                super.add(withUuid);
-            }
-        }
-        
-        suppressNotifications = wasSuppressed;
+        this.sortComparator = c;
         notifyListChanged(Event.newOther());
+    }
+
+    public Comparator<? super ListItem> getSortComparator() {
+        return sortComparator;
     }
 
     public void setChecked(int index, boolean isChecked) {

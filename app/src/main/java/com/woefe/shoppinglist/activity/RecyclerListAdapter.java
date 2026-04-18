@@ -20,6 +20,11 @@ import com.woefe.shoppinglist.R;
 import com.woefe.shoppinglist.shoppinglist.ListItem;
 import com.woefe.shoppinglist.shoppinglist.ShoppingList;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.List;
+
 /**
  * @author Wolfgang Popp
  */
@@ -35,6 +40,8 @@ public class RecyclerListAdapter extends RecyclerView.Adapter<RecyclerListAdapte
     private boolean dragHandlerEnabled = true;
     private RecyclerView recyclerView;
     private volatile boolean isProcessingNotification = false;
+    private Comparator<ListItem> sortComparator = null;
+    private List<ListItem> sortedItemsCache = null;
 
 private final ShoppingList.ShoppingListListener listener = new ShoppingList.ShoppingListListener() {
         @Override
@@ -45,48 +52,8 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             }
             isProcessingNotification = true;
             try {
-                int listSize = list.size();
-                int index = e.getIndex();
-                android.util.Log.d("RecyclerListAdapter", "onShoppingListUpdate: state=" + e.getState() + " index=" + index + " size=" + listSize);
-                
-                switch (e.getState()) {
-                    case ShoppingList.Event.ITEM_CHANGED:
-                        if (index >= 0 && index < listSize) {
-                            notifyItemChanged(index);
-                        } else {
-                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_CHANGED out of bounds " + index);
-                            notifyDataSetChanged();
-                        }
-                        break;
-                    case ShoppingList.Event.ITEM_INSERTED:
-                        if (index >= 0 && index <= listSize) {
-                            notifyItemInserted(index);
-                        } else {
-                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_INSERTED out of bounds " + index);
-                            notifyDataSetChanged();
-                        }
-                        break;
-                    case ShoppingList.Event.ITEM_MOVED:
-                        int oldIndex = e.getOldIndex();
-                        int newIndex = e.getNewIndex();
-                        if (oldIndex >= 0 && newIndex >= 0 && oldIndex < listSize && newIndex < listSize && oldIndex != newIndex) {
-                            notifyItemMoved(oldIndex, newIndex);
-                            notifyDataSetChanged();
-                        } else {
-                            android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: ITEM_MOVED out of bounds old=" + oldIndex + " new=" + newIndex);
-                            notifyDataSetChanged();
-                        }
-                        break;
-                    case ShoppingList.Event.ITEM_REMOVED:
-                        if (listSize == 0) {
-                            notifyDataSetChanged();
-                        } else {
-                            notifyItemRemoved(index);
-                        }
-                        break;
-                    default:
-                        notifyDataSetChanged();
-                }
+                updateSortedCache();
+                notifyDataSetChanged();
             } catch (Exception ex) {
                 android.util.Log.e("RecyclerListAdapter", "onShoppingListUpdate: exception", ex);
             } finally {
@@ -119,22 +86,79 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             shoppingList.removeListener(listener);
             shoppingList = null;
         }
+        sortedItemsCache = null;
+    }
+
+    public void setSortComparator(Comparator<ListItem> comparator) {
+        this.sortComparator = comparator;
+        updateSortedCache();
+        notifyDataSetChanged();
+    }
+
+    private void updateSortedCache() {
+        if (sortComparator == null) {
+            sortedItemsCache = null;
+            return;
+        }
+        sortedItemsCache = new ArrayList<>(shoppingList);
+        Collections.sort(sortedItemsCache, sortComparator);
+    }
+
+    private ListItem getItemAt(int position) {
+        if (sortedItemsCache != null) {
+            return sortedItemsCache.get(position);
+        }
+        return shoppingList.get(position);
+    }
+
+    private int getItemPosition(ListItem item) {
+        if (sortedItemsCache != null) {
+            return sortedItemsCache.indexOf(item);
+        }
+        return shoppingList.indexOf(item);
+    }
+
+    public int getListIndexFromDisplayPosition(int displayPosition) {
+        if (displayPosition < 0 || displayPosition >= getItemCount()) {
+            return -1;
+        }
+        ListItem item = getItemAt(displayPosition);
+        return shoppingList.indexOf(item);
+    }
+
+    public int getDisplayPositionFromListIndex(int listIndex) {
+        if (listIndex < 0 || listIndex >= shoppingList.size()) {
+            return -1;
+        }
+        ListItem item = shoppingList.get(listIndex);
+        return getItemPosition(item);
     }
 
     public void move(int fromPos, int toPos) {
-        shoppingList.move(fromPos, toPos);
+        int fromListIndex = getListIndexFromDisplayPosition(fromPos);
+        int toListIndex = getListIndexFromDisplayPosition(toPos);
+        if (fromListIndex >= 0 && toListIndex >= 0) {
+            shoppingList.move(fromListIndex, toListIndex);
+        }
     }
 
     public void remove(int pos) {
-        final int lastDeletedPosition = pos;
-        final ListItem lastDeletedItem = shoppingList.remove(pos);
-        mainActivity.makeUndoSnackbar()
-                    .setAction(R.string.undo_delete, new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-                            shoppingList.add(lastDeletedPosition, lastDeletedItem);
-                        }
-                    }).show();
+        int listIndex = getListIndexFromDisplayPosition(pos);
+        if (listIndex < 0) {
+            return;
+        }
+        final ListItem lastDeletedItem = shoppingList.remove(listIndex);
+        if (lastDeletedItem != null) {
+            mainActivity.makeUndoSnackbar()
+                        .setAction(R.string.undo_delete, new View.OnClickListener() {
+                            @Override
+                            public void onClick(View v) {
+                                if (lastDeletedItem != null) {
+                                    shoppingList.add(lastDeletedItem);
+                                }
+                            }
+                        }).show();
+        }
     }
 
     public void registerRecyclerView(RecyclerView view) {
@@ -173,11 +197,11 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
         android.util.Log.d("RecyclerListAdapter", "onBindViewHolder: position=" + position);
-        if (shoppingList == null || position < 0 || position >= shoppingList.size()) {
-            android.util.Log.e("RecyclerListAdapter", "onBindViewHolder: invalid position " + position + " size=" + (shoppingList == null ? "null" : shoppingList.size()));
+        if (shoppingList == null || position < 0 || position >= getItemCount()) {
+            android.util.Log.e("RecyclerListAdapter", "onBindViewHolder: invalid position " + position + " size=" + (shoppingList == null ? "null" : getItemCount()));
             return;
         }
-        ListItem listItem = shoppingList.get(position);
+        ListItem listItem = getItemAt(position);
         if (listItem == null) {
             android.util.Log.e("RecyclerListAdapter", "onBindViewHolder: null item at position " + position);
             return;
@@ -196,12 +220,16 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
         holder.itemView.setBackgroundColor(colorBackground);
 
+        final ListItem boundItem = listItem;
         final int boundPosition = position;
         holder.view.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (shoppingList != null && boundPosition >= 0 && boundPosition < shoppingList.size()) {
-                    shoppingList.toggleChecked(boundPosition);
+                if (shoppingList != null && boundItem != null) {
+                    int listIndex = shoppingList.indexOf(boundItem);
+                    if (listIndex >= 0) {
+                        shoppingList.toggleChecked(listIndex);
+                    }
                 } else {
                     android.util.Log.w("RecyclerListAdapter", "onClick: invalid state, skipping toggle");
                 }
@@ -212,8 +240,11 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
         holder.view.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
             public boolean onLongClick(View v) {
-                return longClickListener != null
-                        && longClickListener.onLongClick(boundPosition);
+                if (shoppingList != null && boundItem != null) {
+                    int listIndex = shoppingList.indexOf(boundItem);
+                    return longClickListener != null && listIndex >= 0 && longClickListener.onLongClick(listIndex);
+                }
+                return false;
             }
         });
 
@@ -236,6 +267,9 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
     public int getItemCount() {
         synchronized (this) {
             if (shoppingList != null) {
+                if (sortedItemsCache != null) {
+                    return sortedItemsCache.size();
+                }
                 return shoppingList.size();
             }
             return 0;
@@ -313,13 +347,17 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
         @Override
         public void clearView(RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder) {
             isDragging = false;
-            if (dragStartPosition >= 0 && lastDropPosition >= 0 && dragStartPosition != lastDropPosition) {
-                shoppingList.move(dragStartPosition, lastDropPosition);
-            } else if (lastDropPosition >= 0 && dragStartPosition < 0) {
+            int fromListIndex = getListIndexFromDisplayPosition(dragStartPosition);
+            int toListIndex = getListIndexFromDisplayPosition(lastDropPosition);
+            if (fromListIndex >= 0 && toListIndex >= 0 && fromListIndex != toListIndex) {
+                shoppingList.move(fromListIndex, toListIndex);
+            } else if (lastDropPosition >= 0 && fromListIndex < 0) {
                 int fromPos = lastDropPosition;
                 int toPos = viewHolder.getAdapterPosition();
-                if (fromPos != toPos && toPos >= 0) {
-                    shoppingList.move(fromPos, toPos);
+                int toIdx = getListIndexFromDisplayPosition(toPos);
+                int fromIdx = getListIndexFromDisplayPosition(fromPos);
+                if (fromIdx >= 0 && toIdx >= 0 && fromIdx != toIdx) {
+                    shoppingList.move(fromIdx, toIdx);
                 }
             }
             dragStartPosition = -1;

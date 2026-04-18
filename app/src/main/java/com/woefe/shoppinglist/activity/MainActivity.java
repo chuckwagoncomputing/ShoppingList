@@ -380,10 +380,7 @@ public class MainActivity extends BinderActivity implements
                         if (o1.isChecked() && !o2.isChecked()) {
                             return -1;
                         }
-                        if (!o1.isChecked() && o2.isChecked()) {
-                            return 1;
-                        }
-                        return o1.getDescription().compareToIgnoreCase(o2.getDescription());
+                        return 1;
                     }
                 };
                 break;
@@ -391,13 +388,10 @@ public class MainActivity extends BinderActivity implements
                 comparator = new Comparator<ListItem>() {
                     @Override
                     public int compare(ListItem o1, ListItem o2) {
-                        if (o1.isChecked() && !o2.isChecked()) {
-                            return 1;
-                        }
                         if (!o1.isChecked() && o2.isChecked()) {
                             return -1;
                         }
-                        return o1.getDescription().compareToIgnoreCase(o2.getDescription());
+                        return 1;
                     }
                 };
                 break;

@@ -145,13 +145,13 @@ class ShoppingListsManager {
         lastReloadedPath = filePath;
 
         try {
-            final ShoppingList list = ShoppingListUnmarshaller.unmarshal(filePath);
             ShoppingListMetadata metadata = shoppingListsMetadata.getByFile(filePath);
             if (metadata != null) {
                 if (metadata.isSyncing || metadata.isDragging || file.lastModified() == metadata.lastWriteTime) {
                     return;
                 }
             } else {
+                final ShoppingList list = ShoppingListUnmarshaller.unmarshal(filePath);
                 metadata = addShoppingList(list, filePath);
             }
             try {
@@ -196,7 +196,6 @@ class ShoppingListsManager {
                     } catch (IOException | UnmarshallException ex) {
                         Log.e(TAG, "Failed to relistAndWrite after delete", ex);
                     }
-                    notifyListeners();
                 } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
                     android.util.Log.d("ShoppingListsManager", "onShoppingListUpdate: ITEM_CHANGED at index=" + index);
@@ -347,7 +346,7 @@ class ShoppingListsManager {
                 metadata.shoppingList.addListener(metadata.updateListener);
             }
             metadata.isSyncing = false;
-            notifyListeners();
+            metadata.shoppingList.notifyListChanged(ShoppingList.Event.newOther());
             android.util.Log.d("ShoppingListsManager", "relistAndWrite: reactivated listeners, cleared flags");
         }
     }

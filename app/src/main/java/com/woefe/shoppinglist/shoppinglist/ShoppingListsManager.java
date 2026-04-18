@@ -196,7 +196,7 @@ class ShoppingListsManager {
                     } catch (IOException | UnmarshallException ex) {
                         Log.e(TAG, "Failed to relistAndWrite after delete", ex);
                     }
-                    notifyListChanged(metadata, ShoppingList.Event.newOther());
+                    notifyListeners();
                 } else if (eventState == ShoppingList.Event.ITEM_CHANGED) {
                     int index = e.getIndex();
                     android.util.Log.d("ShoppingListsManager", "onShoppingListUpdate: ITEM_CHANGED at index=" + index);
@@ -347,6 +347,7 @@ class ShoppingListsManager {
                 metadata.shoppingList.addListener(metadata.updateListener);
             }
             metadata.isSyncing = false;
+            notifyListeners();
             android.util.Log.d("ShoppingListsManager", "relistAndWrite: reactivated listeners, cleared flags");
         }
     }
@@ -364,7 +365,7 @@ class ShoppingListsManager {
         metadata.lastWriteTime = file.lastModified();
     }
 
-    private void notifyListChanged(ShoppingListMetadata metadata, ShoppingList.Event event) {
+    private void notifyListeners() {
         for (ListsChangeListener listener : listeners) {
             listener.onListsChanged();
         }
@@ -573,12 +574,6 @@ class ShoppingListsManager {
 
         private int size() {
             return byName.size();
-        }
-
-        private void notifyListeners() {
-            for (ListsChangeListener listener : listeners) {
-                listener.onListsChanged();
-            }
         }
     }
 }

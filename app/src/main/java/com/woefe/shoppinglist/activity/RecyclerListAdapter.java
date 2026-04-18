@@ -178,7 +178,7 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
                             @Override
                             public void onClick(View v) {
                                 if (lastDeletedItem != null) {
-                                    shoppingList.add(lastDeletedItem);
+                                    shoppingList.add(listIndex, lastDeletedItem);
                                 }
                             }
                         }).show();

@@ -218,7 +218,7 @@ class ShoppingListsManager {
                     int newIndex = e.getIndex();
                     if (newIndex >= 0 && newIndex < list.size()) {
                         UUID newUuid = list.getUuid(newIndex);
-                        metadata.locallyAddedUuids.add(newUuid);
+                        metadata.locallyAddedUuids.put(newUuid, newIndex);
                     }
                 } else if (eventState == ShoppingList.Event.OTHER) {
                     return;
@@ -257,8 +257,8 @@ class ShoppingListsManager {
         Map<UUID, String> localDescChanges = new HashMap<>(metadata.locallyModifiedDescriptions);
         Map<UUID, String> localQtyChanges = new HashMap<>(metadata.locallyModifiedQuantities);
         Map<UUID, Integer> localOrderChanges = new HashMap<>(metadata.locallyModifiedOrders);
+        Map<UUID, Integer> localAddedUuids = new HashMap<>(metadata.locallyAddedUuids);
         Set<UUID> localDeletions = new HashSet<>(metadata.locallyDeletedUuids);
-        Set<UUID> localAddedUuids = new HashSet<>(metadata.locallyAddedUuids);
         Map<UUID, ListItem> localItemByUuid = new HashMap<>();
         for (ListItem item : metadata.shoppingList) {
             UUID uuid = item.getUuid();
@@ -310,11 +310,11 @@ class ShoppingListsManager {
                     }
                 }
 
-                for (UUID uuid : localAddedUuids) {
+                for (UUID uuid : localAddedUuids.keySet()) {
                     if (!fileUuids.contains(uuid)) {
                         ListItem item = localItemByUuid.get(uuid);
                         if (item != null) {
-                            metadata.shoppingList.add(item);
+                            metadata.shoppingList.add(localAddedUuids.get(uuid), item);
                         }
                     }
                 }
@@ -502,8 +502,8 @@ class ShoppingListsManager {
         private Map<UUID, String> locallyModifiedDescriptions = new HashMap<>();
         private Map<UUID, String> locallyModifiedQuantities = new HashMap<>();
         private Map<UUID, Integer> locallyModifiedOrders = new HashMap<>();
+        private Map<UUID, Integer> locallyAddedUuids = new HashMap<>();
         private Set<UUID> locallyDeletedUuids = new HashSet<>();
-        private Set<UUID> locallyAddedUuids = new HashSet<>();
         private Comparator<ListItem> sortComparator;
 
         private ShoppingListMetadata(ShoppingList shoppingList, String filename) {

@@ -30,25 +30,28 @@ public class ListItem {
     private String quantity;
     private UUID uuid;
 
-    public ListItem(boolean isChecked, String description, String quantity, UUID uuid) {
-        android.util.Log.d("ListItem", "ListItem: isChecked=" + isChecked + " desc=" + description + " qty=" + quantity + " uuid=" + uuid);
+    public ListItem(boolean isChecked, String description, String quantity) {
         this.isChecked = isChecked;
         this.description = description;
         this.quantity = quantity;
+        setRandomUuid();
+    }
+
+    public ListItem(boolean isChecked, String description, String quantity, UUID uuid) {
+        this(isChecked, description, quantity);
         this.uuid = uuid;
     }
 
-    public ListItem(boolean isChecked, String description, String quantity) {
-        this(isChecked, description, quantity, UUID.randomUUID());
+    public UUID getUuid() {
+        return uuid;
     }
 
-    public UUID getUuid() {
-        android.util.Log.d("ListItem", "getUuid: returning " + uuid);
+    public UUID setRandomUuid() {
+        uuid = UUID.randomUUID();
         return uuid;
     }
 
     public void setUuid(UUID uuid) {
-        android.util.Log.d("ListItem", "setUuid: setting to " + uuid);
         this.uuid = uuid;
     }
 
@@ -74,19 +77,5 @@ public class ListItem {
 
     public void setQuantity(String quantity) {
         this.quantity = quantity;
-    }
-
-    static class ListItemWithUuid extends ListItem {
-        private final UUID uuid;
-
-        public ListItemWithUuid(UUID uuid, ListItem item) {
-            super(item.isChecked, item.description, item.quantity, item.getUuid());
-            this.uuid = uuid;
-        }
-
-        public UUID getUuid() {
-            return uuid;
-        }
-
     }
 }

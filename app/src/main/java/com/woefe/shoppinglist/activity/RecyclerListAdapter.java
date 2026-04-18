@@ -106,9 +106,15 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
     private ListItem getItemAt(int position) {
         if (sortedItemsCache != null) {
+            if (position >= sortedItemsCache.size()) {
+                return null;
+            }
             return sortedItemsCache.get(position);
         }
-        return shoppingList.get(position);
+        if (shoppingList != null && position < shoppingList.size()) {
+            return shoppingList.get(position);
+        }
+        return null;
     }
 
     private int getItemPosition(ListItem item) {
@@ -120,10 +126,24 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
     public int getListIndexFromDisplayPosition(int displayPosition) {
         if (displayPosition < 0 || displayPosition >= getItemCount()) {
+            android.util.Log.w("RecyclerListAdapter", "getListIndexFromDisplayPosition: pos " + displayPosition + " out of bounds [0, " + getItemCount() + ")");
             return -1;
         }
         ListItem item = getItemAt(displayPosition);
-        return shoppingList.indexOf(item);
+        if (item == null) {
+            android.util.Log.w("RecyclerListAdapter", "getListIndexFromDisplayPosition: item is null at " + displayPosition);
+            return -1;
+        }
+        android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: displayPos=" + displayPosition + " item=" + item.getDescription() + " item.class=" + item.getClass().getSimpleName() + " item.uuid=" + item.getUuid());
+        int idx = shoppingList.indexOf(item);
+        android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: result=" + idx + " shoppingList.size=" + shoppingList.size());
+        if (idx < 0) {
+            for (int i = 0; i < shoppingList.size(); i++) {
+                ListItem slItem = shoppingList.get(i);
+                android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: shoppingList[" + i + "] desc=" + slItem.getDescription() + " uuid=" + slItem.getUuid() + " class=" + slItem.getClass().getSimpleName());
+            }
+        }
+        return idx;
     }
 
     public int getDisplayPositionFromListIndex(int listIndex) {
@@ -143,11 +163,15 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
     }
 
     public void remove(int pos) {
+        android.util.Log.d("RecyclerListAdapter", "remove: pos=" + pos + " itemCount=" + getItemCount());
         int listIndex = getListIndexFromDisplayPosition(pos);
+        android.util.Log.d("RecyclerListAdapter", "remove: listIndex=" + listIndex);
         if (listIndex < 0) {
             return;
         }
+        android.util.Log.d("RecyclerListAdapter", "remove: calling shoppingList.remove(" + listIndex + ")");
         final ListItem lastDeletedItem = shoppingList.remove(listIndex);
+        android.util.Log.d("RecyclerListAdapter", "remove: removed=" + (lastDeletedItem != null ? lastDeletedItem.getDescription() : "null"));
         if (lastDeletedItem != null) {
             mainActivity.makeUndoSnackbar()
                         .setAction(R.string.undo_delete, new View.OnClickListener() {
@@ -196,19 +220,18 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
-        android.util.Log.d("RecyclerListAdapter", "onBindViewHolder: position=" + position);
+        android.util.Log.d("RecyclerListAdapter", "onBindViewHolder: pos=" + position + " itemCount=" + getItemCount());
         if (shoppingList == null || position < 0 || position >= getItemCount()) {
-            android.util.Log.e("RecyclerListAdapter", "onBindViewHolder: invalid position " + position + " size=" + (shoppingList == null ? "null" : getItemCount()));
+            android.util.Log.w("RecyclerListAdapter", "onBindViewHolder: skipping due to invalid state");
             return;
         }
         ListItem listItem = getItemAt(position);
         if (listItem == null) {
-            android.util.Log.e("RecyclerListAdapter", "onBindViewHolder: null item at position " + position);
+            android.util.Log.w("RecyclerListAdapter", "onBindViewHolder: listItem is null");
             return;
         }
         holder.description.setText(listItem.getDescription());
         holder.quantity.setText(listItem.getQuantity());
-        android.util.Log.d("RecyclerListAdapter", "onBindViewHolder: bound " + listItem.getDescription() + " uuid=" + listItem.getUuid());
 
         if (listItem.isChecked()) {
             holder.description.setTextColor(colorChecked);
@@ -230,8 +253,6 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
                     if (listIndex >= 0) {
                         shoppingList.toggleChecked(listIndex);
                     }
-                } else {
-                    android.util.Log.w("RecyclerListAdapter", "onClick: invalid state, skipping toggle");
                 }
             }
         });
@@ -414,7 +435,13 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
         @Override
         public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
-            RecyclerListAdapter.this.remove(viewHolder.getAdapterPosition());
+            int pos = viewHolder.getAdapterPosition();
+            android.util.Log.d("RecyclerListCallback", "onSwiped: pos=" + pos + " itemCount=" + getItemCount());
+            viewHolder.itemView.setAlpha(1.0f);
+            viewHolder.itemView.setTranslationX(0);
+            android.util.Log.d("RecyclerListCallback", "onSwiped: calling remove");
+            RecyclerListAdapter.this.remove(pos);
+            android.util.Log.d("RecyclerListCallback", "onSwiped: after remove, itemCount=" + getItemCount());
         }
 
         @Override
@@ -441,7 +468,6 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
             deleteIcon.setBounds(iconLeft, iconTop, iconRight, iconBottom);
             deleteIcon.draw(c);
 
-            // Fade out the view as it is swiped out of the parent's bounds
             final float alpha = 1.0f - Math.abs(dX) / (float) itemView.getWidth();
             itemView.setAlpha(alpha);
             itemView.setTranslationX(dX);

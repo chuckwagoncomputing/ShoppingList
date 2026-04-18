@@ -88,10 +88,6 @@ class ShoppingListsManager {
                         break;
                     case FileObserver.CLOSE_WRITE:
                     case FileObserver.MODIFY:
-                        ShoppingListMetadata metadata = shoppingListsMetadata.getByFile(file.getPath());
-                        if (metadata != null && (metadata.isDragging || metadata.isSyncing)) {
-                            return;
-                        }
                         loadFromFile(file);
                         break;
                 }
@@ -143,49 +139,25 @@ class ShoppingListsManager {
         String filePath = file.getPath();
         long now = SystemClock.elapsedRealtime();
         if (lastReloadedPath != null && lastReloadedPath.equals(filePath) && (now - lastReloadTime) < 200) {
-            Log.d(TAG, "loadFromFile: SKIPPED (throttled) " + filePath);
             return;
         }
-        Log.d(TAG, "loadFromFile: LOADING " + filePath);
         lastReloadTime = now;
         lastReloadedPath = filePath;
 
         try {
             final ShoppingList list = ShoppingListUnmarshaller.unmarshal(filePath);
-            ShoppingListMetadata existing = shoppingListsMetadata.getByFile(filePath);
-            if (existing != null) {
-                if (existing.isSyncing) {
-                    Log.d(TAG, "loadFromFile: skipping due to isSyncing");
+            ShoppingListMetadata metadata = shoppingListsMetadata.getByFile(filePath);
+            if (metadata != null) {
+                if (metadata.isSyncing || metadata.isDragging || file.lastModified() == metadata.lastWriteTime) {
                     return;
-                }
-                if (existing.isDragging) {
-                    Log.d(TAG, "loadFromFile: skipping due to isDragging");
-                    return;
-                }
-                boolean hadListener = existing.updateListener != null;
-                if (hadListener) {
-                    existing.shoppingList.removeListener(existing.updateListener);
-                }
-                existing.isSyncing = true;
-                try {
-                    existing.shoppingList.setSuppressNotifications(true);
-                    existing.shoppingList.clear();
-                    existing.shoppingList.addAllWithoutNewId(list);
-                    existing.isDirty = false;
-                    rename(existing.shoppingList.getName(), list.getName());
-                    existing.shoppingList.setSuppressNotifications(false);
-                    existing.shoppingList.notifyListChanged(ShoppingList.Event.newOther());
-                    shoppingListsMetadata.notifyListeners();
-                } catch (Exception e) {
-                    Log.e(TAG, "Error during loadFromFile update", e);
-                } finally {
-                    existing.isSyncing = false;
-                    if (hadListener) {
-                        existing.shoppingList.addListener(existing.updateListener);
-                    }
                 }
             } else {
-                addShoppingList(list, file.getPath());
+                metadata = addShoppingList(list, filePath);
+            }
+            try {
+                relistAndWrite(metadata);
+            } catch (IOException | UnmarshallException e) {
+                Log.v(getClass().getSimpleName(), "Failed to relist and write file " + file);
             }
         } catch (IOException | UnmarshallException e) {
             Log.v(getClass().getSimpleName(), "Ignoring file " + file);
@@ -267,6 +239,11 @@ class ShoppingListsManager {
 
     private void relistAndWrite(ShoppingListMetadata metadata) throws IOException, UnmarshallException {
         android.util.Log.d("ShoppingListsManager", "relistAndWrite: START");
+        StackTraceElement[] elements = Thread.currentThread().getStackTrace();
+        for (int i = 1; i < elements.length; i++) {
+            StackTraceElement s = elements[i];
+            System.out.println("\tat " + s.getClassName() + "." + s.getMethodName() + "(" + s.getFileName() + ":" + s.getLineNumber() + ")");
+        }
         metadata.isSyncing = true;
         android.util.Log.d("ShoppingListsManager", "relistAndWrite: current list size=" + metadata.shoppingList.size());
         boolean hadListener = metadata.updateListener != null;
@@ -311,7 +288,9 @@ class ShoppingListsManager {
                     UUID uuid = item.getUuid();
                     android.util.Log.d("ShoppingListsManager", "relistAndWrite: processing i=" + i + " uuid=" + uuid);
 
-                    if (uuid == null || localDeletions.contains(uuid)) {
+                    if (uuid == null) {
+                        item.setRandomUuid();
+                    } else if (localDeletions.contains(uuid)) {
                         android.util.Log.d("ShoppingListsManager", "relistAndWrite: skipping " + uuid);
                         continue;
                     }
@@ -327,7 +306,7 @@ class ShoppingListsManager {
                     }
                     android.util.Log.d("ShoppingListsManager", "relistAndWrite: adding item " + item.getDescription());
                     if (!localOrderChanges.containsKey(uuid)) {
-                        metadata.shoppingList.addItemPreservingUuid(item);
+                        metadata.shoppingList.add(item);
                     }
                 }
 
@@ -335,7 +314,7 @@ class ShoppingListsManager {
                     if (!fileUuids.contains(uuid)) {
                         ListItem item = localItemByUuid.get(uuid);
                         if (item != null) {
-                            metadata.shoppingList.addItemPreservingUuid(item);
+                            metadata.shoppingList.add(item);
                         }
                     }
                 }
@@ -352,28 +331,23 @@ class ShoppingListsManager {
                     android.util.Log.d("ShoppingListsManager", "relistAndWrite: item " + i + " uuid=" + it.getUuid() + " desc=" + it.getDescription());
                 }
 
-                metadata.isDirty = true;
-                writeToFile(metadata);
-                metadata.locallyAddedUuids.clear();
-                metadata.locallyModifiedDescriptions.clear();
-                metadata.locallyModifiedQuantities.clear();
-                metadata.locallyModifiedChecked.clear();
-                metadata.locallyModifiedOrders.clear();
-            } else {
-                metadata.isDirty = true;
-                writeToFile(metadata);
-                metadata.locallyAddedUuids.clear();
-                metadata.locallyModifiedDescriptions.clear();
-                metadata.locallyModifiedQuantities.clear();
-                metadata.locallyModifiedChecked.clear();
-                metadata.locallyModifiedOrders.clear();
             }
+
+            metadata.isDirty = true;
+            writeToFile(metadata);
+            metadata.locallyAddedUuids.clear();
+            metadata.locallyModifiedDescriptions.clear();
+            metadata.locallyModifiedQuantities.clear();
+            metadata.locallyModifiedChecked.clear();
+            metadata.locallyModifiedOrders.clear();
+            metadata.locallyDeletedUuids.clear();
         } finally {
             metadata.shoppingList.setSuppressNotifications(false);
             if (hadListener) {
                 metadata.shoppingList.addListener(metadata.updateListener);
             }
             metadata.isSyncing = false;
+            android.util.Log.d("ShoppingListsManager", "relistAndWrite: reactivated listeners, cleared flags");
         }
     }
 
@@ -381,10 +355,13 @@ class ShoppingListsManager {
         ShoppingList copy = new ShoppingList(metadata.shoppingList.getName());
         copy.addAllWithoutNewId(metadata.shoppingList);
         int size = copy.size();
-        try (OutputStream os = new FileOutputStream(metadata.filename)) {
+        File file = new File(metadata.filename);
+        try (OutputStream os = new FileOutputStream(file)) {
             ShoppingListMarshaller.marshall(os, copy);
             metadata.isDirty = false;
         }
+
+        metadata.lastWriteTime = file.lastModified();
     }
 
     private void notifyListChanged(ShoppingListMetadata metadata, ShoppingList.Event event) {
@@ -519,6 +496,7 @@ class ShoppingListsManager {
         private boolean isDragging;
         private boolean pendingWrite;
         private FileObserver observer;
+        private Long lastWriteTime;
         private ShoppingList.ShoppingListListener updateListener;
         private Map<UUID, Boolean> locallyModifiedChecked = new HashMap<>();
         private Map<UUID, String> locallyModifiedDescriptions = new HashMap<>();

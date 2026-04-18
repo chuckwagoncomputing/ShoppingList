@@ -54,7 +54,6 @@ public class ShoppingListUnmarshaller {
     }
 
     private static ListItem createListItem(String line) {
-        android.util.Log.d("Unmarshaller", "createListItem: INPUT line=[" + line + "]");
         boolean isChecked = line.startsWith("//");
         if (isChecked) {
             line = line.substring(2);
@@ -64,25 +63,19 @@ public class ShoppingListUnmarshaller {
         String item = line;
 
         int atIndex = line.lastIndexOf("@");
-        android.util.Log.d("Unmarshaller", "createListItem: atIndex=" + atIndex + " line.length=" + line.length());
         if (atIndex != -1) {
             String uuidStr = line.substring(atIndex + 1).trim();
-            android.util.Log.d("Unmarshaller", "createListItem: uuidStr=[" + uuidStr + "] len=" + uuidStr.length());
             if (uuidStr.length() == 36) {
                 try {
                     uuid = UUID.fromString(uuidStr);
                     item = line.substring(0, atIndex).trim();
-                    android.util.Log.d("Unmarshaller", "createListItem: SUCCESS parsed uuid=" + uuid);
                 } catch (IllegalArgumentException e) {
-                    android.util.Log.d("Unmarshaller", "createListItem: FAILED parse uuidStr=" + uuidStr);
                     item = line.trim();
                 }
             } else {
-                android.util.Log.d("Unmarshaller", "createListItem: wrong length " + uuidStr.length());
                 item = line.trim();
             }
         } else {
-            android.util.Log.d("Unmarshaller", "createListItem: no @ found");
             item = line.trim();
         }
 
@@ -98,7 +91,6 @@ public class ShoppingListUnmarshaller {
             name = item.trim();
         }
 
-        android.util.Log.d("Unmarshaller", "createListItem: isChecked=" + isChecked + " name=" + name + " quantity=" + quantity + " uuid=" + uuid);
         return new ListItem(isChecked, name.trim(), quantity, uuid);
     }
 }

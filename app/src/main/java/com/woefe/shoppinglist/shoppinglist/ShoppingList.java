@@ -71,25 +71,17 @@ public class ShoppingList extends ArrayList<ListItem> {
     }
 
     public UUID getUuid(int index) {
-        android.util.Log.d("ShoppingList", "getUuid: index=" + index);
         synchronized (this) {
             if (index < 0 || index >= size()) {
-                android.util.Log.d("ShoppingList", "getUuid: index out of bounds " + index + " size=" + size());
                 return null;
             }
-            UUID uuid = ((ListItem.ListItemWithUuid) get(index)).getUuid();
-            android.util.Log.d("ShoppingList", "getUuid: returning " + uuid);
-            return uuid;
+            return get(index).getUuid();
         }
     }
 
     @Override
     public synchronized boolean add(ListItem item) {
-        android.util.Log.d("ShoppingList", "add: current size=" + size() + " item=" + item.getDescription() + " existing uuid=" + item.getUuid());
-        UUID newUuid = (item.getUuid() != null) ? item.getUuid() : UUID.randomUUID();
-        ListItem.ListItemWithUuid withUuid = new ListItem.ListItemWithUuid(newUuid, item);
-        android.util.Log.d("ShoppingList", "add: created withUuid=" + withUuid.getUuid());
-        boolean res = super.add(withUuid);
+        boolean res = super.add(item);
         if (!suppressNotifications) {
             notifyListChanged(Event.newItemInserted(size() - 1));
         }
@@ -118,28 +110,6 @@ public class ShoppingList extends ArrayList<ListItem> {
         }
     }
 
-    public void addItemPreservingUuid(ListItem item) {
-        android.util.Log.d("ShoppingList", "addItemPreservingUuid: item class=" + item.getClass().getSimpleName() + " desc=" + item.getDescription() + " item.uuid=" + item.getUuid() + " suppress=" + suppressNotifications);
-        synchronized (this) {
-            if (item.getClass().getSimpleName().equals("ListItemWithUuid")) {
-                android.util.Log.d("ShoppingList", "addItemPreservingUuid: using super.add (ListItemWithUuid)");
-                super.add(item);
-            } else if (item.getUuid() != null) {
-                android.util.Log.d("ShoppingList", "addItemPreservingUuid: wrapping with existing uuid=" + item.getUuid());
-                ListItem.ListItemWithUuid wrapped = new ListItem.ListItemWithUuid(item.getUuid(), item);
-                super.add(wrapped);
-            } else {
-                android.util.Log.d("ShoppingList", "addItemPreservingUuid: calling add() - generating new UUID");
-                UUID newUuid = UUID.randomUUID();
-                ListItem.ListItemWithUuid withUuid = new ListItem.ListItemWithUuid(newUuid, item);
-                super.add(withUuid);
-            }
-        }
-        if (!suppressNotifications) {
-            notifyListChanged(Event.newItemInserted(size() - 1));
-        }
-    }
-
     @Override
     public void add(int index, ListItem element) {
         super.add(index, element);
@@ -162,7 +132,6 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     @Override
     public synchronized ListItem set(int index, ListItem element) {
-        android.util.Log.d("ShoppingList", "set: index=" + index + " element=" + element.getDescription() + " current size=" + size());
         ListItem old = super.set(index, element);
         if (!suppressNotifications) {
             notifyListChanged(Event.newItemChanged(index));
@@ -172,17 +141,14 @@ public class ShoppingList extends ArrayList<ListItem> {
 
     @Override
     public synchronized ListItem remove(int index) {
-        android.util.Log.d("ShoppingList", "remove: index=" + index + " current size=" + size());
         if (index < 0 || index >= size()) {
             return null;
         }
         ListItem removedItem = super.get(index);
-        UUID removedUuid = ((ListItem.ListItemWithUuid) removedItem).getUuid();
+        UUID removedUuid = removedItem.getUuid();
         boolean removedIsChecked = removedItem.isChecked();
         String removedDesc = removedItem.getDescription();
-        android.util.Log.d("ShoppingList", "remove: removing " + removedDesc + " uuid=" + removedUuid);
         ListItem res = super.remove(index);
-        android.util.Log.d("ShoppingList", "remove: after remove, size=" + size());
         Event event = Event.newItemRemoved(index);
         event.setRemovedItem(removedUuid, removedIsChecked);
         event.setRemovedDescription(removedDesc);
@@ -282,7 +248,6 @@ public class ShoppingList extends ArrayList<ListItem> {
     }
 
     public void setChecked(int index, boolean isChecked) {
-        android.util.Log.d("ShoppingList", "setChecked: index=" + index + " isChecked=" + isChecked);
         ListItem item;
         synchronized (this) {
             if (index < 0 || index >= size()) {
@@ -298,7 +263,6 @@ public class ShoppingList extends ArrayList<ListItem> {
         boolean newChecked;
         synchronized (this) {
             if (index < 0 || index >= size()) {
-                android.util.Log.e("ShoppingList", "toggleChecked: index out of bounds " + index + " size=" + size() + " stack:", new Exception("toggleChecked OOB"));
                 return;
             }
             newChecked = !get(index).isChecked();

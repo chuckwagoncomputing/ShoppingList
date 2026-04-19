@@ -1,3 +1,5 @@
+__This is the updated slop version of Wolfgang Popp's ShoppingList. Don't assume data integrity.__
+
 <h1 align="center"><img src="app/src/main/res/mipmap-xxhdpi/ic_launcher.png" width="70" height="70" /><br/> ShoppingList</h1>
 A simple shopping list for Android
 
@@ -15,7 +17,6 @@ ShoppingList saves your shopping lists as a plain text files.
 The syntax of a ShoppingList file is quite simple and easy to read and edit.
 
 ### Syntax
- * The very first line of the file is the name of the list in square brackets
  * Empty lines or lines with only white spaces are ignored
  * Every item of the list corresponds to a single line in the file
  * Checked items start with `//`
@@ -24,8 +25,6 @@ The syntax of a ShoppingList file is quite simple and easy to read and edit.
 
 ### Example
 ```
-[ ShoppingList ]
-
 Milk
 Bananas #
 Juice #2 Liters

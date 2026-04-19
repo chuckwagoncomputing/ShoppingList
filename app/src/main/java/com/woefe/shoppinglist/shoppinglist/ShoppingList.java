@@ -314,8 +314,9 @@ public class ShoppingList extends ArrayList<ListItem> {
         if (suppressNotifications) {
             return;
         }
+        final Handler handler = new Handler(Looper.getMainLooper());
         for (ShoppingListListener listener : new LinkedList<>(listeners)) {
-            new Handler(Looper.getMainLooper()).post(() -> {
+            handler.post(() -> {
                     listener.onShoppingListUpdate(this, event);
             });
         }

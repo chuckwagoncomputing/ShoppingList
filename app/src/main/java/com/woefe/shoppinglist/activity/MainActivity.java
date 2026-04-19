@@ -52,7 +52,6 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.widget.ShareActionProvider;
 import androidx.appcompat.widget.Toolbar;
-import androidx.core.content.ContextCompat;
 import androidx.core.view.MenuItemCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
@@ -318,9 +317,6 @@ public class MainActivity extends BinderActivity implements
             doShare();
             return true;
         } else if (itemId == R.id.action_sort_manual) {
-            if (currentListName != null) {
-                getBinder().setListSortComparator(currentListName, null);
-            }
             if (currentFragment instanceof ShoppingListFragment) {
                 RecyclerListAdapter adapter = ((ShoppingListFragment) currentFragment).getRecyclerListAdapter();
                 if (adapter != null) {
@@ -418,9 +414,6 @@ public class MainActivity extends BinderActivity implements
             if (adapter != null) {
                 adapter.setSortComparator(comparator);
             }
-        }
-        if (comparator != null && currentListName != null) {
-            getBinder().setListSortComparator(currentListName, comparator);
         }
         updateDragHandlerState();
     }

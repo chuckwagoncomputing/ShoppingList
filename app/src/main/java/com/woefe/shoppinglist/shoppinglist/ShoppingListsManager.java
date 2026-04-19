@@ -455,13 +455,6 @@ class ShoppingListsManager {
         return null;
     }
 
-    void setListSortComparator(String name, Comparator<ListItem> comparator) {
-        ShoppingListMetadata metadata = shoppingListsMetadata.getByName(name);
-        if (metadata != null) {
-            metadata.setSortComparator(comparator);
-        }
-    }
-
     void rename(String oldName, String newName) {
         if (!oldName.equals(newName)) {
             ShoppingListMetadata metadata = shoppingListsMetadata.removeByName(oldName);
@@ -486,7 +479,6 @@ class ShoppingListsManager {
         private Map<UUID, Integer> locallyModifiedOrders = new HashMap<>();
         private Map<UUID, Integer> locallyAddedUuids = new HashMap<>();
         private Set<UUID> locallyDeletedUuids = new HashSet<>();
-        private Comparator<ListItem> sortComparator;
 
         private ShoppingListMetadata(ShoppingList shoppingList, String filename) {
             this.shoppingList = shoppingList;
@@ -495,10 +487,6 @@ class ShoppingListsManager {
             this.isSyncing = false;
             this.isDragging = false;
             this.pendingWrite = false;
-        }
-
-        private void setSortComparator(Comparator<ListItem> comparator) {
-            this.sortComparator = comparator;
         }
     }
 

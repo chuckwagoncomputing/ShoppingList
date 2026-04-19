@@ -130,10 +130,6 @@ public class ShoppingListService extends Service implements SharedPreferences.On
             return manager.getListFilename(listName);
         }
 
-        public void setListSortComparator(String listName, Comparator<ListItem> comparator) {
-            manager.setListSortComparator(listName, comparator);
-        }
-
         public void addListChangeListener(ListsChangeListener listener) {
             manager.setListChangeListener(listener);
         }

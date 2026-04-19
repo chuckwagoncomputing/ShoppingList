@@ -417,7 +417,6 @@ public class MainActivity extends BinderActivity implements
             SortType sortType = getCurrentSortOrder();
             boolean enabled = (sortType == SortType.MANUAL || sortType == SortType.NONE);
             fragment.setDragHandlerEnabled(enabled);
-            android.util.Log.d("MainActivity", "Drag handlers " + (enabled ? "enabled" : "disabled") + " for sort type " + sortType);
         }
     }
 

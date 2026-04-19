@@ -47,7 +47,6 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
         @Override
         public void onShoppingListUpdate(ShoppingList list, ShoppingList.Event e) {
             if (isProcessingNotification) {
-                android.util.Log.w("RecyclerListAdapter", "onShoppingListUpdate: already processing, skipping");
                 return;
             }
             isProcessingNotification = true;
@@ -126,24 +125,13 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
     public int getListIndexFromDisplayPosition(int displayPosition) {
         if (displayPosition < 0 || displayPosition >= getItemCount()) {
-            android.util.Log.w("RecyclerListAdapter", "getListIndexFromDisplayPosition: pos " + displayPosition + " out of bounds [0, " + getItemCount() + ")");
             return -1;
         }
         ListItem item = getItemAt(displayPosition);
         if (item == null) {
-            android.util.Log.w("RecyclerListAdapter", "getListIndexFromDisplayPosition: item is null at " + displayPosition);
             return -1;
         }
-        android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: displayPos=" + displayPosition + " item=" + item.getDescription() + " item.class=" + item.getClass().getSimpleName() + " item.uuid=" + item.getUuid());
-        int idx = shoppingList.indexOfUuid(item.getUuid());
-        android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: result=" + idx + " shoppingList.size=" + shoppingList.size());
-        if (idx < 0) {
-            for (int i = 0; i < shoppingList.size(); i++) {
-                ListItem slItem = shoppingList.get(i);
-                android.util.Log.d("RecyclerListAdapter", "getListIndexFromDisplayPosition: shoppingList[" + i + "] desc=" + slItem.getDescription() + " uuid=" + slItem.getUuid() + " class=" + slItem.getClass().getSimpleName());
-            }
-        }
-        return idx;
+        return shoppingList.indexOfUuid(item.getUuid());
     }
 
     public int getDisplayPositionFromListIndex(int listIndex) {
@@ -163,15 +151,11 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
     }
 
     public void remove(int pos) {
-        android.util.Log.d("RecyclerListAdapter", "remove: pos=" + pos + " itemCount=" + getItemCount());
         int listIndex = getListIndexFromDisplayPosition(pos);
-        android.util.Log.d("RecyclerListAdapter", "remove: listIndex=" + listIndex);
         if (listIndex < 0) {
             return;
         }
-        android.util.Log.d("RecyclerListAdapter", "remove: calling shoppingList.remove(" + listIndex + ")");
         final ListItem lastDeletedItem = shoppingList.remove(listIndex);
-        android.util.Log.d("RecyclerListAdapter", "remove: removed=" + (lastDeletedItem != null ? lastDeletedItem.getDescription() : "null"));
         if (lastDeletedItem != null) {
             mainActivity.makeUndoSnackbar()
                         .setAction(R.string.undo_delete, new View.OnClickListener() {
@@ -220,14 +204,11 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
 
     @Override
     public void onBindViewHolder(@NonNull final ViewHolder holder, int position) {
-        android.util.Log.d("RecyclerListAdapter", "onBindViewHolder: pos=" + position + " itemCount=" + getItemCount());
         if (shoppingList == null || position < 0 || position >= getItemCount()) {
-            android.util.Log.w("RecyclerListAdapter", "onBindViewHolder: skipping due to invalid state");
             return;
         }
         ListItem listItem = getItemAt(position);
         if (listItem == null) {
-            android.util.Log.w("RecyclerListAdapter", "onBindViewHolder: listItem is null");
             return;
         }
         holder.description.setText(listItem.getDescription());
@@ -436,12 +417,9 @@ private final ShoppingList.ShoppingListListener listener = new ShoppingList.Shop
         @Override
         public void onSwiped(RecyclerView.ViewHolder viewHolder, int direction) {
             int pos = viewHolder.getAdapterPosition();
-            android.util.Log.d("RecyclerListCallback", "onSwiped: pos=" + pos + " itemCount=" + getItemCount());
             viewHolder.itemView.setAlpha(1.0f);
             viewHolder.itemView.setTranslationX(0);
-            android.util.Log.d("RecyclerListCallback", "onSwiped: calling remove");
             RecyclerListAdapter.this.remove(pos);
-            android.util.Log.d("RecyclerListCallback", "onSwiped: after remove, itemCount=" + getItemCount());
         }
 
         @Override

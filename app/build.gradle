@@ -24,11 +24,11 @@ android {
     buildToolsVersion "36.1.0"
 
     defaultConfig {
-        applicationId "com.woefe.shoppinglist"
+        applicationId "com.chuckwagoncomputing.shoppinglist"
         minSdk 21
         targetSdk 36
         versionCode 12
-        versionName "0.11.0"
+        versionName "0.12.0"
     }
     buildTypes {
         release {

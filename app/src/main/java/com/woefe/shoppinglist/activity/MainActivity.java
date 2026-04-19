@@ -122,13 +122,20 @@ public class MainActivity extends BinderActivity implements
             View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
 
         final Toolbar toolbar = findViewById(R.id.toolbar_main);
-        
-        int currentHeight = toolbar.getLayoutParams().height;
-        if (currentHeight > 0) {
-            toolbar.getLayoutParams().height = currentHeight + 48;
-        }
-        toolbar.setPadding(toolbar.getPaddingLeft(), toolbar.getPaddingTop() + 48,
-            toolbar.getPaddingRight(), toolbar.getPaddingBottom());
+        final int originalHeight = toolbar.getLayoutParams().height;
+
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar, (v, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            if (originalHeight > 0) {
+                toolbar.getLayoutParams().height = originalHeight + statusBarHeight;
+            }
+            int originalPaddingTop = toolbar.getPaddingTop();
+            if (originalPaddingTop < statusBarHeight) {
+                toolbar.setPadding(toolbar.getPaddingLeft(), originalPaddingTop + statusBarHeight,
+                    toolbar.getPaddingRight(), toolbar.getPaddingBottom());
+            }
+            return windowInsets;
+        });
 
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
@@ -145,6 +152,16 @@ public class MainActivity extends BinderActivity implements
         drawerList = findViewById(R.id.nav_drawer_content);
         drawerAdapter = new ArrayAdapter<>(this, R.layout.drawer_list_item);
         drawerList.setAdapter(drawerAdapter);
+
+        final int drawerHeaderHeight = getResources().getDimensionPixelSize(R.dimen.drawer_header_height);
+        ViewCompat.setOnApplyWindowInsetsListener(drawerLayout, (v, windowInsets) -> {
+            View header = v.findViewById(R.id.drawer_header);
+            if (header != null && drawerHeaderHeight > 0) {
+                int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+                header.getLayoutParams().height = drawerHeaderHeight + statusBarHeight;
+            }
+            return windowInsets;
+        });
         drawerList.setOnItemClickListener(new ListView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {

@@ -18,5 +18,5 @@
   -->
 
 <resources>
-    <!-- Default screen margins, per the Android Design guidelines. -->
+    <dimen name="drawer_header_height">65dp</dimen>
 </resources>

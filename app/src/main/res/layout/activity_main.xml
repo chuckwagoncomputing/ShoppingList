@@ -28,7 +28,7 @@
         <TextView
             android:id="@+id/drawer_header"
             android:layout_width="match_parent"
-            android:layout_height="84dp"
+            android:layout_height="@dimen/drawer_header_height"
             android:background="?attr/colorPrimaryContainer"
             android:paddingStart="16dp"
             android:paddingEnd="16dp"

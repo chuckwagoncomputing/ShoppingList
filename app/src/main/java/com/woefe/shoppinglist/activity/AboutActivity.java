@@ -32,7 +32,9 @@ import androidx.appcompat.app.ActionBar;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.widget.Toolbar;
 import androidx.core.content.ContextCompat;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 
 import com.woefe.shoppinglist.BuildConfig;
 import com.woefe.shoppinglist.R;
@@ -58,13 +60,20 @@ public class AboutActivity extends AppCompatActivity {
 		final Toolbar toolbar = findViewById(R.id.toolbar_about);
 		toolbar.setTitle(R.string.about);
 		setSupportActionBar(toolbar);
-		
-		int currentHeight = toolbar.getLayoutParams().height;
-        if (currentHeight > 0) {
-            toolbar.getLayoutParams().height = currentHeight + 48;
-        }
-        toolbar.setPadding(toolbar.getPaddingLeft(), toolbar.getPaddingTop() + 48,
-            toolbar.getPaddingRight(), toolbar.getPaddingBottom());
+
+        final int originalHeight = toolbar.getLayoutParams().height;
+        ViewCompat.setOnApplyWindowInsetsListener(toolbar, (v, windowInsets) -> {
+            int statusBarHeight = windowInsets.getInsets(WindowInsetsCompat.Type.statusBars()).top;
+            if (originalHeight > 0) {
+                toolbar.getLayoutParams().height = originalHeight + statusBarHeight;
+            }
+            int originalPaddingTop = toolbar.getPaddingTop();
+            if (originalPaddingTop < statusBarHeight) {
+                toolbar.setPadding(toolbar.getPaddingLeft(), originalPaddingTop + statusBarHeight,
+                    toolbar.getPaddingRight(), toolbar.getPaddingBottom());
+            }
+            return windowInsets;
+        });
 
 		ActionBar actionBar = getSupportActionBar();
 		if (actionBar != null) {

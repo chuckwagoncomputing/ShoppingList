@@ -45,7 +45,6 @@ public class ShoppingList extends ArrayList<ListItem> {
     private String name;
     private final List<ShoppingListListener> listeners = new LinkedList<>();
     private boolean suppressNotifications = false;
-    private Comparator<? super ListItem> sortComparator = null;
 
     public ShoppingList(String name) {
         super();
@@ -244,16 +243,6 @@ public class ShoppingList extends ArrayList<ListItem> {
     @Override
     public ListIterator<ListItem> listIterator() {
         return new ListItr(super.listIterator());
-    }
-
-    @Override
-    public void sort(Comparator<? super ListItem> c) {
-        this.sortComparator = c;
-        notifyListChanged(Event.newOther());
-    }
-
-    public Comparator<? super ListItem> getSortComparator() {
-        return sortComparator;
     }
 
     public void setChecked(int index, boolean isChecked) {

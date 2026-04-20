@@ -238,6 +238,7 @@ public class MainActivity extends BinderActivity implements
             });
             snackbar.show();
         }
+        applySavedSortOrder();
     }
 
     @Override
